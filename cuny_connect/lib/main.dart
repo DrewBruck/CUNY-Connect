@@ -10,7 +10,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: true, //turns debug corner on/off
+      debugShowCheckedModeBanner: false, //turns debug corner on/off
       theme: ThemeData(
         primarySwatch: Colors.purple,
         primaryColor: const Color.fromARGB(255, 63, 4, 73),
@@ -32,7 +32,20 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat Page', style: TextStyle(color: Colors.white)),
+        leading: const Icon(Icons.add_circle, color: Colors.white),
+        title:
+            const Text('CUNY Connect', style: TextStyle(color: Colors.white)),
+        actions: [
+          IconButton(
+              onPressed: () => {},
+              icon: const Icon(Icons.search),
+              color: Colors.white),
+          IconButton(
+              onPressed: () => {},
+              icon: const Icon(Icons.person_outlined),
+              color: Colors.white),
+        ],
+        centerTitle: true,
         backgroundColor:
             Theme.of(context).primaryColor, // Explicitly set background color
       ),

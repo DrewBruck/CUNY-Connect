@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'chat_page.dart';
+import 'profile.dart';
 
 void main() {
   runApp(const MyApp());
@@ -42,7 +43,12 @@ class HomePage extends StatelessWidget {
 
           //profile icon
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfilePage()),
+              );
+            },
             icon: const Icon(Icons.person_outlined),
             color: Colors.white,
           ),

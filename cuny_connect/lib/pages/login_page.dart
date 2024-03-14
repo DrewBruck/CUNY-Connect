@@ -1,13 +1,17 @@
 import 'package:cuny_connect/components/my_button.dart';
 import 'package:flutter/material.dart';
 import 'package:cuny_connect/components/app_textfield.dart';
+import 'package:flutter/widgets.dart';
 
 class LoginPage extends StatelessWidget {
   //necessary email and password controller variables
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passController = TextEditingController();
 
-  LoginPage({super.key});
+  //register onTap function
+  final void Function()? onTap;
+
+  LoginPage({super.key, required this.onTap});
 
   //login
 
@@ -66,8 +70,11 @@ class LoginPage extends StatelessWidget {
             children: [
               Text("Not registered?  ",
                   style: TextStyle(color: Colors.grey[600])),
-              Text("Sign up now!",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              GestureDetector(
+                onTap: onTap,
+                child: Text("Sign up now!",
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
             ],
           )
 

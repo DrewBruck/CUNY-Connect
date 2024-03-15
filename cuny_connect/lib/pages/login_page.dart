@@ -1,7 +1,9 @@
+//import 'dart:js';
+
+import 'package:cuny_connect/auth/auth_service.dart';
 import 'package:cuny_connect/components/my_button.dart';
 import 'package:flutter/material.dart';
 import 'package:cuny_connect/components/app_textfield.dart';
-import 'package:flutter/widgets.dart';
 
 class LoginPage extends StatelessWidget {
   //necessary email and password controller variables
@@ -13,9 +15,29 @@ class LoginPage extends StatelessWidget {
 
   LoginPage({super.key, required this.onTap});
 
-  //login
+  //login Method
+  void login(BuildContext context) async {
+    //get auth service
+    final authService = AuthService();
 
-  void login() {}
+    //try login
+    try {
+      await authService.signInWithEmailPassword(
+        _emailController.text,
+        _passController.text,
+      );
+    }
+
+    // catch errors or exceptions
+    catch (e) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(e.toString()),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,10 +78,10 @@ class LoginPage extends StatelessWidget {
 
           const SizedBox(height: 30), //spacer between TextFields and Buttons
 
-          //sign in button
+          //Login button
           MyButton(
             buttonName: "Login",
-            onTap: login,
+            onTap: () => login(context),
           ),
 
           const SizedBox(height: 30), //spacer between TextFields and Buttons
@@ -72,7 +94,7 @@ class LoginPage extends StatelessWidget {
                   style: TextStyle(color: Colors.grey[600])),
               GestureDetector(
                 onTap: onTap,
-                child: Text("Sign up now!",
+                child: const Text("Sign up now!",
                     style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],

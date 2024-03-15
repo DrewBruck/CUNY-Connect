@@ -1,7 +1,6 @@
 import 'package:cuny_connect/components/app_textfield.dart';
 import 'package:cuny_connect/components/my_button.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
 class RegisterPage extends StatelessWidget {
   //necessary email and password controller variables
@@ -29,8 +28,8 @@ class RegisterPage extends StatelessWidget {
 
           const SizedBox(height: 30), //spacer between picture and text
 
-          Center(
-            child: const Text(
+          const Center(
+            child: Text(
               'Just a click away from something incredible!',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -83,7 +82,7 @@ class RegisterPage extends StatelessWidget {
                   style: TextStyle(color: Colors.grey[600])),
               GestureDetector(
                 onTap: onTap,
-                child: Text("Login now!",
+                child: const Text("Login now!",
                     style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],

@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "587393372398",
+    "firebase_url": "https://cuny-connect-default-rtdb.firebaseio.com",
+    "project_id": "cuny-connect",
+    "storage_bucket": "cuny-connect.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:587393372398:android:d7defcae8ea25a2acae3ff",
+        "android_client_info": {
+          "package_name": "com.example.cuny_connect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD-Ub9fo7RI2TjvygjSdBZv56VWNTov0H4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

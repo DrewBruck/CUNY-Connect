@@ -1,37 +1,210 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cuny_connect/services/firebase_service.dart';
+import 'package:cuny_connect/models/CUNYUser.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({Key? key}) : super(key: key);
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  _ProfilePageState createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  final FirebaseService _firebaseService = FirebaseService();
+  final TextEditingController _bioController = TextEditingController();
+  bool _isEditing = false;
+  final double _contentWidth = 500; // Set a fixed width for the content
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  void _updateBio() async {
+    if (_bioController.text.length <= 250) {
+      final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
+      await _firebaseService.updateUserBio(currentUserId, _bioController.text);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bio updated successfully!')));
+      setState(() => _isEditing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(
-          color: Colors.white, //change auto-back button color
-        ),
-        title: const Text(
-          "Profile Page",
-          style: TextStyle(color: Colors.white),
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text("Profile Page", style: TextStyle(color: Colors.white, fontSize: 20)),
         backgroundColor: Theme.of(context).primaryColor,
       ),
-      body: const Center(
-        child: Text('Information and picture here'),
-
-        //need to add picture pull from firebase
-
-        //need to add username pull from firebase
-
-        //need to add academic year pull from firebase
-
-        //need to add bio pull from firebase
+      body: FutureBuilder<CUNYUser?>(
+        future: _firebaseService.getUserProfile(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: Text('No profile data available.'));
+          }
+          final user = snapshot.data!;
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                Container(
+                  color: Colors.grey[200], // Upper background color
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 20),
+                      _profileIcon(),
+                      const SizedBox(height: 20),
+                      Container(),
+                    ],
+                  ),
+                ),
+                _buildDivider(context),
+                const SizedBox(height: 20),
+                if (_isEditing) _buildBioSection(user) else
+                  Container(
+                  width: _contentWidth,
+                  color: Colors.white, // Lower background color
+                  child: Column(
+                    children: [
+                      if (!_isEditing) _buildBioSection(user),
+                      const SizedBox(height: 20),
+                      Container(
+                        alignment: Alignment.centerLeft,
+                        child: Column(
+                          children: _infoCards(user),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
+
+  Widget _profileIcon() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.black,
+          width: 4,
+        ),
+      ),
+      child: const CircleAvatar(
+        radius: 60,
+        backgroundColor: Colors.transparent,
+        child: Icon(Icons.person, size: 120),
+      ),
+    );
+  }
+
+  Widget _buildDivider(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 2),
+            height: 2,
+            color: Colors.black,
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _infoCards(CUNYUser user) {
+    return [
+      _infoCard('Name', user.name),
+      _infoCard('Email', user.email),
+      _infoCard('Major', user.major),
+      _infoCard('Schedule', user.schedule.join(', ')),
+    ];
+  }
+
+  Widget _infoCard(String title, String info) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 50.0), // Increase horizontal padding for alignment
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              "$title: ",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18), // Increased font size
+            ),
+          ),
+          Expanded(
+            flex: 2, // Adjust flex to give more space for the info text
+            child: Text(
+              info,
+              style: const TextStyle(fontSize: 16), // Increased font size for info text
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBioSection(CUNYUser user) {
+    return Align(
+      alignment: Alignment.center,
+      child: Column(
+        children: [
+          if (_isEditing) ...[
+            Container(
+              width: _contentWidth, // Control the width of the TextFormField
+              child: TextFormField(
+                controller: _bioController,
+                maxLength: 250,
+                decoration: const InputDecoration(
+                  labelText: 'Bio',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
+                keyboardType: TextInputType.multiline,
+                maxLines: null,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _updateBio,
+              child: const Text('Save Bio'),
+            ),
+          ] else ...[
+            TextButton(
+              onPressed: () => setState(() => _isEditing = true),
+              child: const Text('Edit Bio', style: TextStyle(fontSize: 16)), // Adjusted for consistency
+            ),
+            Container(
+              width: _contentWidth, // Maintain the same width for the bio display
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              alignment: Alignment.center,
+              child: Text(
+                user.bio ?? "No bio available.",
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16), // Ensure the bio text size is consistent
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _bioController.dispose();
+    super.dispose();
+  }
 }
+             
+

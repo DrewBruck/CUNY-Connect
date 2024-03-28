@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -28,10 +25,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for windows - '
@@ -48,6 +42,17 @@ class DefaultFirebaseOptions {
         );
     }
   }
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyD_WY7tNdYtLrePxqbXs_v_ME2cUS3ndfg',
+    appId: '1:587393372398:web:27a97c93b9cf1422cae3ff',
+    messagingSenderId: '587393372398',
+    projectId: 'cuny-connect',
+    authDomain: 'cuny-connect.firebaseapp.com',
+    databaseURL: 'https://cuny-connect-default-rtdb.firebaseio.com',
+    storageBucket: 'cuny-connect.appspot.com',
+    measurementId: 'G-D96DQM33S7',
+  );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyD-Ub9fo7RI2TjvygjSdBZv56VWNTov0H4',
@@ -66,5 +71,15 @@ class DefaultFirebaseOptions {
     databaseURL: 'https://cuny-connect-default-rtdb.firebaseio.com',
     storageBucket: 'cuny-connect.appspot.com',
     iosBundleId: 'com.example.cunyConnect',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyBEO2qc3qBAwpHJfFnCMYSvo50uA9hFVC4',
+    appId: '1:587393372398:ios:a197cac853fa668fcae3ff',
+    messagingSenderId: '587393372398',
+    projectId: 'cuny-connect',
+    databaseURL: 'https://cuny-connect-default-rtdb.firebaseio.com',
+    storageBucket: 'cuny-connect.appspot.com',
+    iosBundleId: 'com.example.cunyConnect.RunnerTests',
   );
 }

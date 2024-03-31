@@ -17,19 +17,22 @@ class ConversationAdapter extends TypeAdapter<Conversation> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Conversation(
-      conversationId: fields[0] as String,
+      conversationIds: fields[0] as String,
       messages: (fields[1] as List).cast<ChatMessage>(),
+      participants: (fields[2] as List).cast<String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Conversation obj) {
     writer
-      ..writeByte(2)
+      ..writeByte(3)
       ..writeByte(0)
-      ..write(obj.conversationId)
+      ..write(obj.conversationIds)
       ..writeByte(1)
-      ..write(obj.messages);
+      ..write(obj.messages)
+      ..writeByte(2)
+      ..write(obj.participants);
   }
 
   @override

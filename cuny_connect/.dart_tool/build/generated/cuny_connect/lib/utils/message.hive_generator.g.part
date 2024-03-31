@@ -15,7 +15,7 @@ class ChatMessageAdapter extends TypeAdapter<ChatMessage> {
     return ChatMessage(
       messageId: fields[0] as String,
       senderId: fields[1] as String,
-      receiverId: fields[2] as String,
+      receiverId: (fields[2] as List).cast<String>(),
       content: fields[3] as String,
       timestamp: fields[4] as DateTime,
     );

@@ -1,35 +1,90 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cuny_connect/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:intl/intl.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cuny_connect/utils/message.dart';
 
 class ChatPage extends StatefulWidget {
-  const ChatPage({super.key});
+  final String conversationId;
+
+  const ChatPage({super.key, required this.conversationId});
 
   @override
-  _ChatPageState createState() => _ChatPageState();
+  _ChatPageState createState() => _ChatPageState(conversationId);
 }
 
 class _ChatPageState extends State<ChatPage> {
   bool _isConnected = true;
   IO.Socket? socket;
   List<ChatMessage> _messages = [];
+  final String conversationId;
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  String userID = FirebaseAuth.instance.currentUser!.uid;
+  List<String> receiverNames = [];
+  final FirebaseService firebaseService = FirebaseService();
+  String title = "";
+  _ChatPageState(this.conversationId);
 
   @override
   void initState() {
     super.initState();
+    _fetchAndSetTitle();
     _loadMessages();
     connectToServer();
   }
 
-  void _loadMessages() async {
-    final box = Hive.box<ChatMessage>('messages');
-    setState(() {
-      _messages = box.values.toList();
+  Future<String> _loadTitle() async {
+    receiverNames = await firebaseService.fetchParticipants(conversationId);
+    String title = await firebaseService.getUserName(receiverNames[1]);
+    return title;
+  }
+
+  void _fetchAndSetTitle() async{
+    String name =  await _loadTitle();
+    setState((){
+      title = name;
     });
+  }
+
+  void _loadMessages() async {
+    final box = await Hive.box<ChatMessage>('messages');
+    if(box.isEmpty) {
+      // Fetch messages from Firestore
+      final conversationRef = FirebaseFirestore.instance.collection(
+          'Conversations').doc(conversationId);
+
+      final messagesSnapshot = await conversationRef.collection('messages')
+          .orderBy('timestamp')
+          .get();
+
+      // Temp list to hold the messages before updating the state.
+      final List<ChatMessage> tempMessages = [];
+
+      // Iterate over the documents in the snapshot.
+      for (var doc in messagesSnapshot.docs) {
+        final message = ChatMessage.fromFirestore(
+            doc.data() as Map<String, dynamic>, doc.id);
+        tempMessages.add(message);
+
+        // Store the message in Hive.
+        await box.add(message);
+      }
+
+      setState(() {
+        _messages = box.values.toList().reversed.toList();;
+      });
+    }
+
+    else{
+      final messages = box.values.toList().reversed.toList();
+      setState(() {
+        _messages = messages;
+      });
+    }
   }
 
   @override
@@ -41,7 +96,7 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void connectToServer() {
-    socket = IO.io('http://localhost:3000', <String, dynamic>{
+    socket = IO.io('http://45.79.155.215:3001', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
@@ -70,20 +125,27 @@ class _ChatPageState extends State<ChatPage> {
     socket?.disconnect();
   }
 
-  void sendMessageToServer(String content) {
+  void sendMessageToServer(String content) async{
     if (socket != null && _isConnected) {
       final messageId = UniqueKey().toString();
-      final senderId = "0000000"; // Actual sender ID logic needed
-      final receiverId = "receiverUserId"; // Actual receiver ID logic needed
+      final senderId = userID;
+      final List<String> receiverIds = receiverNames;
       
       final message = ChatMessage(
         messageId: messageId,
         senderId: senderId,
-        receiverId: receiverId,
+        receiverId: receiverIds,
         content: content,
         timestamp: DateTime.now(),
       );
-      
+
+      await FirebaseFirestore.instance.collection('Conversations').doc(conversationId).collection('messages').doc(messageId).set({
+        'senderId': senderId,
+        'receiverId': receiverIds,
+        'content': content,
+        'timestamp': DateTime.now(),
+      });
+
       final box = Hive.box<ChatMessage>('messages');
       box.add(message);
       
@@ -94,7 +156,7 @@ class _ChatPageState extends State<ChatPage> {
       socket!.emit('msg', {
         'messageId': messageId,
         'senderId': senderId,
-        'receiverId': receiverId,
+        'receiverId': receiverIds,
         'content': content,
         'timestamp': message.timestamp.toIso8601String(),
       });
@@ -107,7 +169,7 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat'),
+        title: Text(title),
         actions: [
           IconButton(
             icon: Icon(_isConnected ? Icons.link_off : Icons.link),
@@ -125,7 +187,7 @@ class _ChatPageState extends State<ChatPage> {
               itemBuilder: (context, index) {
                 final message = _messages[index];
                 final formattedTime = DateFormat('yyyy-MM-dd – hh:mm a').format(message.timestamp);
-                bool isSentByUser = (message.senderId == "currentUserId"); // Actual logic needed
+                bool isSentByUser = (message.senderId == userID); // Actual logic needed
 
                 return Align(
                   alignment: isSentByUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -205,14 +267,36 @@ class _ChatPageState extends State<ChatPage> {
 
 
 
-// Conversations/
-// ├─ conversationID/
-// │  ├─ message/
-// │  │  ├─ messageID/
-// │  │  │  ├─ content
-// │  │  │  ├─ receiverID
-// │  │  │  ├─ senderID
-// │  │  │  ├─ timeStamp
-// │  │  ├─ lastMessage
-// │  │  ├─ lastMessageTime
-// │  │  ├─ participants/
+// Conversations            : Collection
+// ├─ conversationID        : String
+// │  ├─ participants       : Array
+// │  ├─ messages           : Sub-Collection
+// │  │  ├─ messageID       : String
+// │  │  │  ├─ content      : String
+// │  │  │  ├─ receiverID   : Array
+// │  │  │  ├─ senderID     : String 
+// │  │  │  ├─ timeStamp    : String
+
+
+
+
+// conversationRef.get().then((docSnapshot){
+//   if(docSnapshot.exists){
+//     print("Document Data: ${docSnapshot.data()}");
+//   }else{
+//     print("Document does not exist!!!!!!!!!!!!");
+//   }
+// }).catchError((error){
+//   print("ERROR: $error");
+// });
+// conversationRef.collection('messages').get().then((docSnapshot){
+//   if(docSnapshot.docs.isEmpty){
+//     print("No messages found in this conversation.");
+//   }else{
+//     for(var doc in docSnapshot.docs) {
+//       print("MessageID: ${doc.id}, Data: ${doc.data()}");
+//     }
+//   }
+// }).catchError((error){
+//   print("ERROR: $error");
+// });

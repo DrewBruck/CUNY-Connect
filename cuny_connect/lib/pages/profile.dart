@@ -66,21 +66,37 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 20),
                 if (_isEditing) _buildBioSection(user) else
                   Container(
-                  width: _contentWidth,
-                  color: Colors.white, // Lower background color
-                  child: Column(
-                    children: [
-                      if (!_isEditing) _buildBioSection(user),
-                      const SizedBox(height: 20),
-                      Container(
-                        alignment: Alignment.centerLeft,
-                        child: Column(
+                    width: _contentWidth,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(10),
+                        topRight: Radius.circular(10),
+                        bottomLeft: Radius.circular(10),
+                        bottomRight: Radius.circular(10),
+                      ),
+                      boxShadow:[
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.5),
+                          spreadRadius: 5,
+                          blurRadius: 7,
+                          offset: Offset(0,3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                          if (!_isEditing) _buildBioSection(user),
+                          const SizedBox(height: 20),
+                          Container(
+                          alignment: Alignment.centerLeft,
+                          child: Column(
                           children: _infoCards(user),
                         ),
                       ),
                     ],
                   ),
-                ),
+                  ),
               ],
             ),
           );

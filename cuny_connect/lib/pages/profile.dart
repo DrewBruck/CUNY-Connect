@@ -1,7 +1,10 @@
+import 'package:cuny_connect/auth/login_or_register.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cuny_connect/services/firebase_service.dart';
 import 'package:cuny_connect/models/CUNYUser.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:cuny_connect/pages/login_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -25,8 +28,21 @@ class _ProfilePageState extends State<ProfilePage> {
     if (_bioController.text.length <= 250) {
       final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
       await _firebaseService.updateUserBio(currentUserId, _bioController.text);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bio updated successfully!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bio updated successfully!')));
       setState(() => _isEditing = false);
+    }
+  }
+
+  Future<void> _signOutAndClearData() async{
+    try{
+      await FirebaseAuth.instance.signOut();
+      await Hive.deleteFromDisk();
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const LoginOrRegister()));
+    }catch(e){
+      print("Error signing out: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('An error occurred while signing out. Please try again later.')));
     }
   }
 
@@ -35,8 +51,11 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text("Profile Page", style: TextStyle(color: Colors.white, fontSize: 20)),
-        backgroundColor: Theme.of(context).primaryColor,
+        title: const Text("Profile Page",
+            style: TextStyle(color: Colors.white, fontSize: 20)),
+        backgroundColor: Theme
+            .of(context)
+            .primaryColor,
       ),
       body: FutureBuilder<CUNYUser?>(
         future: _firebaseService.getUserProfile(),
@@ -75,27 +94,41 @@ class _ProfilePageState extends State<ProfilePage> {
                         bottomLeft: Radius.circular(10),
                         bottomRight: Radius.circular(10),
                       ),
-                      boxShadow:[
+                      boxShadow: [
                         BoxShadow(
                           color: Colors.grey.withOpacity(0.5),
                           spreadRadius: 5,
                           blurRadius: 7,
-                          offset: Offset(0,3),
+                          offset: Offset(0, 3),
                         ),
                       ],
                     ),
                     child: Column(
                       children: [
-                          if (!_isEditing) _buildBioSection(user),
-                          const SizedBox(height: 20),
-                          Container(
+                        if (!_isEditing) _buildBioSection(user),
+                        const SizedBox(height: 20),
+                        Container(
                           alignment: Alignment.centerLeft,
                           child: Column(
-                          children: _infoCards(user),
+                            children: _infoCards(user),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 20.0),
+                          child: ElevatedButton(
+                            onPressed: _signOutAndClearData,
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(150, 50),
+                            ),
+                            child: const Text(
+                              'Sign Out',
+                              style: TextStyle(fontSize: 18),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
                   ),
               ],
             ),
@@ -148,21 +181,24 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _infoCard(String title, String info) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 50.0), // Increase horizontal padding for alignment
+      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 50.0),
+      // Increase horizontal padding for alignment
       child: Row(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           Expanded(
             child: Text(
               "$title: ",
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18), // Increased font size
+              style: const TextStyle(fontWeight: FontWeight.bold,
+                  fontSize: 18), // Increased font size
             ),
           ),
           Expanded(
             flex: 2, // Adjust flex to give more space for the info text
             child: Text(
               info,
-              style: const TextStyle(fontSize: 16), // Increased font size for info text
+              style: const TextStyle(
+                  fontSize: 16), // Increased font size for info text
             ),
           ),
         ],
@@ -195,22 +231,26 @@ class _ProfilePageState extends State<ProfilePage> {
               onPressed: _updateBio,
               child: const Text('Save Bio'),
             ),
-          ] else ...[
-            TextButton(
-              onPressed: () => setState(() => _isEditing = true),
-              child: const Text('Edit Bio', style: TextStyle(fontSize: 16)), // Adjusted for consistency
-            ),
-            Container(
-              width: _contentWidth, // Maintain the same width for the bio display
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              alignment: Alignment.center,
-              child: Text(
-                user.bio ?? "No bio available.",
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16), // Ensure the bio text size is consistent
+          ] else
+            ...[
+              TextButton(
+                onPressed: () => setState(() => _isEditing = true),
+                child: const Text('Edit Bio',
+                    style: TextStyle(fontSize: 16)), // Adjusted for consistency
               ),
-            ),
-          ],
+              Container(
+                width: _contentWidth,
+                // Maintain the same width for the bio display
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                alignment: Alignment.center,
+                child: Text(
+                  user.bio ?? "No bio available.",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 16), // Ensure the bio text size is consistent
+                ),
+              ),
+            ],
         ],
       ),
     );
@@ -222,5 +262,3 @@ class _ProfilePageState extends State<ProfilePage> {
     super.dispose();
   }
 }
-             
-

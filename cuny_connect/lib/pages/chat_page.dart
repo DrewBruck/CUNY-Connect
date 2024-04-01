@@ -39,8 +39,13 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<String> _loadTitle() async {
     receiverNames = await firebaseService.fetchParticipants(conversationId);
-    String title = await firebaseService.getUserName(receiverNames[1]);
-    return title;
+    receiverNames.removeWhere((id) => id == userID);
+    if(receiverNames.isNotEmpty){
+      String title = await firebaseService.getUserName(receiverNames.first);
+      return title;
+    }
+
+    return "Chat";
   }
 
   void _fetchAndSetTitle() async{
@@ -96,18 +101,17 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void connectToServer() {
-    socket = IO.io('http://45.79.155.215:3001', <String, dynamic>{
+    socket = IO.io('https://45-79-155-215.ip.linodeusercontent.com:3001/',{
       'transports': ['websocket'],
-      'autoConnect': false,
     });
     socket!.connect();
     
     socket!.onConnect((_) => print('Connected'));
-    
-    socket!.on('msg', (data) {
-      if (data['receiverId'] == "currentUserId") {
+
+    socket!.on('broadcast', (data) {
+      if (data['receiverId'].first == userID) {
         setState(() {
-          _messages.add(ChatMessage(
+          _messages.insert(0, ChatMessage(
             messageId: data['messageId'],
             senderId: data['senderId'],
             receiverId: data['receiverId'],

@@ -6,8 +6,6 @@ A Capstone Application to assist CUNY students communicate based on classes in s
  - [ ] Build Title For Each Conversation
  - [ ] Conversations Page
  - [ ] Add + functions.
- - [ ] Clean up Singleton Design Pattern (Firebase)
- - [ ] Lock Down Linode Server (Harden)
  - [ ] Add Search for all conversations of current user. 
  - [ ] Update profile picture (Initials)
  - [ ] Update Rules for Conversations (Strict)

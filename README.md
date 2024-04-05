@@ -1,7 +1,7 @@
 # CUNY Connect
 A Capstone Application to assist CUNY students communicate based on classes in schedule
 
-## Todo List:
+## Stanley's To do List:
  - [X] Update Current Firebase Rules (Strict)
  - [ ] Build Title For Each Conversation
  - [ ] Conversations Page

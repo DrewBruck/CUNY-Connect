@@ -2,6 +2,7 @@ import 'package:cuny_connect/auth/login_or_register.dart';
 import 'package:cuny_connect/pages/home_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cuny_connect/utils/hive.dart';
 
 /*This page should act like a gate for logging in.  If
 someone doesn't log out, they shouldn't have to sign
@@ -19,9 +20,17 @@ class AuthGate extends StatelessWidget {
         body: StreamBuilder(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        //is user logged in?
+        //is user logged in
         if (snapshot.hasData) {
-          return const HomePage();
+          // Initialize Hive and open boxes
+          HiveHelper.initializedHive().then((_) => {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const HomePage())
+            ),
+          });
+
+          // TODO: Get this to be in the middle!
+          return const CircularProgressIndicator();
         }
 
         //is user NOT logged in?

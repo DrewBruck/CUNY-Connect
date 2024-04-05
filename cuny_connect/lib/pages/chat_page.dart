@@ -50,22 +50,37 @@ class _ChatPageState extends State<ChatPage> {
 
   void _fetchAndSetTitle() async{
     String name =  await _loadTitle();
-    setState((){
-      title = name;
-    });
+    if(mounted){
+      setState((){
+        title = name;
+      });
+    }
   }
 
   void _loadMessages() async {
     final box = await Hive.box<ChatMessage>('messages');
     if(box.isEmpty) {
+      print('LOAD MESSAGE');
       // Fetch messages from Firestore
       final conversationRef = FirebaseFirestore.instance.collection(
           'Conversations').doc(conversationId);
 
+      conversationRef.get().then((docSnapshot){
+        if(docSnapshot.exists){
+          print("Document Data: ${docSnapshot.data()}");
+        }else{
+          print("Document does not exist!!!!!!!!!!!!");
+        }
+      }).catchError((error){
+        print("ERROR: $error");
+      });
+
+      print('LOAD MESSAGE 2');
       final messagesSnapshot = await conversationRef.collection('messages')
           .orderBy('timestamp')
           .get();
 
+      print('LOAD MESSAGE 3');
       // Temp list to hold the messages before updating the state.
       final List<ChatMessage> tempMessages = [];
 
@@ -78,17 +93,20 @@ class _ChatPageState extends State<ChatPage> {
         // Store the message in Hive.
         await box.add(message);
       }
-
-      setState(() {
-        _messages = box.values.toList().reversed.toList();;
-      });
+      if(mounted){
+        setState(() {
+          _messages = box.values.toList().reversed.toList();;
+        });
+      }
     }
 
     else{
       final messages = box.values.toList().reversed.toList();
-      setState(() {
-        _messages = messages;
-      });
+      if(mounted){
+        setState(() {
+          _messages = messages;
+        });
+      }
     }
   }
 
@@ -103,13 +121,14 @@ class _ChatPageState extends State<ChatPage> {
   void connectToServer() {
     socket = IO.io('https://45-79-155-215.ip.linodeusercontent.com:3001/',{
       'transports': ['websocket'],
+      'autoConnect' : true   // LETS US WORK IN DART DEMO!!
     });
     socket!.connect();
     
     socket!.onConnect((_) => print('Connected'));
 
     socket!.on('broadcast', (data) {
-      if (data['receiverId'].first == userID) {
+      if (data['receiverId'].first == userID && mounted) {
         setState(() {
           _messages.insert(0, ChatMessage(
             messageId: data['messageId'],
@@ -152,10 +171,12 @@ class _ChatPageState extends State<ChatPage> {
 
       final box = Hive.box<ChatMessage>('messages');
       box.add(message);
-      
-      setState(() {
-        _messages.insert(0,message);
-      });
+
+      if(mounted){
+        setState(() {
+          _messages.insert(0,message);
+        });
+      }
       
       socket!.emit('msg', {
         'messageId': messageId,
@@ -262,9 +283,11 @@ class _ChatPageState extends State<ChatPage> {
     } else {
       connectToServer();
     }
-    setState(() {
-      _isConnected = !_isConnected;
-    });
+    if(mounted){ // Part of the StatefulWidget class.
+      setState(() {
+        _isConnected = !_isConnected;
+      });
+    }
   }
 }
 

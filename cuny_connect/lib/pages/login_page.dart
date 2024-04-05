@@ -17,9 +17,9 @@ class LoginPage extends StatelessWidget {
 
   //login Method
   void login(BuildContext context) async {
+
     //get auth services
     final authService = AuthService();
-
     //try login
     try {
       await authService.signInWithEmailPassword(

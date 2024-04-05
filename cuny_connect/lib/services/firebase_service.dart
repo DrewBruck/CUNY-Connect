@@ -99,4 +99,3 @@ class FirebaseService {
       return participants;
     }
 }
-

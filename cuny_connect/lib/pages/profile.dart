@@ -1,10 +1,10 @@
 import 'package:cuny_connect/auth/login_or_register.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cuny_connect/auth/auth_gate.dart';
 import 'package:cuny_connect/services/firebase_service.dart';
 import 'package:cuny_connect/models/CUNYUser.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:cuny_connect/pages/login_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -37,8 +37,8 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _signOutAndClearData() async{
     try{
       await FirebaseAuth.instance.signOut();
-      await Hive.deleteFromDisk();
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const LoginOrRegister()));
+      //await Hive.deleteFromDisk();  // Talk about data privacy later.
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const AuthGate()));
     }catch(e){
       print("Error signing out: $e");
       ScaffoldMessenger.of(context).showSnackBar(

@@ -4,11 +4,11 @@ A Capstone Application to assist CUNY students communicate based on classes in s
 ## Todo List:
  - [X] Update Current Firebase Rules (Strict)
  - [X] Create a README.md
- - [ ] Fix Password/Username Vulnerability
- - [ ] Build Title For Each Conversation
- - [ ] Conversations Page
+ - [X] Fix Password/Username Vulnerability
+ - [X] Build Title For Each Conversation
+ - [X] Conversations Page
  - [ ] Add + functions.
- - [ ] Clean up Singleton Design Pattern (Firebase)
+ - [X] Clean up Singleton Design Pattern (Firebase)
  - [ ] Lock Down Linode Server (Harden)
  - [ ] Add Search for all conversations of current user. 
  - [ ] Update profile picture (Initials)

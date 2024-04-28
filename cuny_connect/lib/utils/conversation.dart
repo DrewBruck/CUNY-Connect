@@ -12,19 +12,37 @@ class Conversation extends HiveObject {
   List<ChatMessage> messages; // Ensure this is ready to store fetched messages.
   @HiveField(2)
   List<String> participants;
+  @HiveField(3)
+  DateTime? lastMessageTime;
+  @HiveField(4)
+  String adminTitle;
+  @HiveField(5)
+  bool isAdmin;
 
-  Conversation({required this.conversationIds, required this.messages, required this.participants});
-
+  
+  Conversation({required this.conversationIds, required this.messages, required this.participants, required this.adminTitle, required this.isAdmin}) {
+    lastMessageTime = messages.isNotEmpty ? messages.last.timestamp : null;
+  }
+  
   // Adjust fromFirestore to handle message fetching
   static Future<Conversation> fromFirestore(FirebaseFirestore db, Map<String, dynamic> firestoreData, String id) async {
     List<String> participants = List<String>.from(firestoreData['participants']);
-    // Fetch messages from the subcollection
-    var messagesSnapshot = await db.collection('Conversations').doc(id).collection('messages').orderBy('timestamp').get();
-    List<ChatMessage> messages = messagesSnapshot.docs
-        .map((doc) => ChatMessage.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
-        .toList();
+    List<ChatMessage> messages = [];
+    bool isAdmin = firestoreData['isAdmin'];
+    String adminTitle = firestoreData['adminTitle'];
 
-    return Conversation(conversationIds: id, messages: messages, participants: participants);
+    try{
+      // Fetch messages from the subcollection
+      var messagesSnapshot = await db.collection('Conversations').doc(id).collection('messages').orderBy('timestamp').get();
+      messages = messagesSnapshot.docs
+          .map((doc) => ChatMessage.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
+
+    }catch(e){
+      print(e);
+    }
+
+    return Conversation(conversationIds: id, messages: messages, participants: participants, isAdmin: isAdmin, adminTitle: adminTitle);
   }
 }
 

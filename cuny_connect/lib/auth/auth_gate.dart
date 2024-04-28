@@ -22,10 +22,17 @@ class AuthGate extends StatelessWidget {
       builder: (context, snapshot) {
         //is user logged in
         if (snapshot.hasData) {
+
           // Initialize Hive and open boxes
           HiveHelper.initializedHive().then((_) => {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => const HomePage())
+
+            // We used the Navigator.pushAndRemoveUntil since this method
+            // pushes a route onto the navigator and removes all the previous
+            // routes until the predicate returns ture.
+
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const HomePage()),
+                  (Route<dynamic> route) => false,
             ),
           });
 

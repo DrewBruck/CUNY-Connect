@@ -1,0 +1,50 @@
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can read and write their own information
+    match /Info/{userId} {
+
+    	// SECURITY: Only users can change their data.
+      allow write: if request.auth.uid == userId;
+
+      // SECURITY: Let anyone signed in view a profile.
+      allow read: if request.auth != null;
+
+    }
+
+    // Conversations can be read and written by their participants
+    match /Conversations/{conversationId} {
+
+      // Function to check if the authenticated user is a participant of the conversation
+      function isUserInConversation() {
+        return request.auth.uid in resource.data.participants;
+      }
+
+      // Only participants can read and create conversations
+      allow read, create: if isUserInConversation();
+
+      // Specific rules for messages within a conversation
+      match /messages/{messageId} {
+
+        // Function to check if the authenticated user is a participant of the conversation
+        function isUserInMessage() {
+          return (request.auth.uid in resource.data.authUsers);
+        }
+
+        // Validate the structure of the message
+        function isValidMessage(data) {
+          return data.keys().hasAll(['senderId', 'receiverId', 'content', 'timestamp']) &&
+                 data.senderId == request.auth.uid &&
+                 data.receiverId.size() > 0 &&
+                 data.timestamp is timestamp;
+        }
+
+        // Only participants can create messages, and the message must be valid
+        //allow create: if isUserInMessage() && isValidMessage(request.resource.data);
+
+        // Only participants can read messages
+        allow read, write: if isUserInMessage();
+      }
+    }
+  }
+}

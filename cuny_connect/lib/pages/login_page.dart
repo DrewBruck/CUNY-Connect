@@ -32,8 +32,8 @@ class LoginPage extends StatelessWidget {
     catch (e) {
       showDialog(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text(e.toString()),
+        builder: (context) => const AlertDialog(
+          title: Text("Invalid Email or Password"),
         ),
       );
     }

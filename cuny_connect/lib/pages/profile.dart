@@ -7,7 +7,8 @@ import 'package:cuny_connect/models/CUNYUser.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  final String? userId; // Optional parameter to specify a user ID
+  const ProfilePage({Key? key, this.userId}) : super(key: key);
 
   @override
   _ProfilePageState createState() => _ProfilePageState();
@@ -18,16 +19,19 @@ class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController _bioController = TextEditingController();
   bool _isEditing = false;
   final double _contentWidth = 500; // Set a fixed width for the content
+  late bool _isCurrentUser;
+  late String _currentUserId;
 
   @override
   void initState() {
     super.initState();
+    _currentUserId = FirebaseAuth.instance.currentUser!.uid;
+    _isCurrentUser = widget.userId == null || widget.userId == _currentUserId;
   }
 
   void _updateBio() async {
     if (_bioController.text.length <= 250) {
-      final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
-      await _firebaseService.updateUserBio(currentUserId, _bioController.text);
+      await _firebaseService.updateUserBio(_currentUserId, _bioController.text);
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Bio updated successfully!')));
       setState(() => _isEditing = false);
@@ -36,14 +40,21 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _signOutAndClearData() async{
     try{
-      await FirebaseAuth.instance.signOut();
-      //await Hive.deleteFromDisk();  // Talk about data privacy later.
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const AuthGate()));
+      if(_isCurrentUser){
+          await FirebaseAuth.instance.signOut();
+          //await Hive.deleteFromDisk();  // Talk about data privacy later.
+          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const AuthGate()));
+      }
     }catch(e){
       print("Error signing out: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('An error occurred while signing out. Please try again later.')));
     }
+  }
+
+  Future<CUNYUser?> _fetchUserProfile() async {
+    String userId = widget.userId ?? _currentUserId;
+    return await _firebaseService.getUserProfile(userId);
   }
 
   @override
@@ -58,7 +69,7 @@ class _ProfilePageState extends State<ProfilePage> {
             .primaryColor,
       ),
       body: FutureBuilder<CUNYUser?>(
-        future: _firebaseService.getUserProfile(),
+        future: _fetchUserProfile(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -113,19 +124,23 @@ class _ProfilePageState extends State<ProfilePage> {
                             children: _infoCards(user),
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 20.0),
-                          child: ElevatedButton(
-                            onPressed: _signOutAndClearData,
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(150, 50),
+
+                        if(_isCurrentUser) ...[
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 20.0),
+                              child: ElevatedButton(
+                                onPressed: _signOutAndClearData,
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(150, 50),
+                                ),
+                                child: const Text(
+                                  'Sign Out',
+                                  style: TextStyle(fontSize: 18),
+                                ),
+                              ),
                             ),
-                            child: const Text(
-                              'Sign Out',
-                              style: TextStyle(fontSize: 18),
-                            ),
-                          ),
-                        ),
+                         ],
+                        
                       ],
                     ),
 
@@ -205,57 +220,65 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-
   Widget _buildBioSection(CUNYUser user) {
-    return Align(
-      alignment: Alignment.center,
-      child: Column(
-        children: [
-          if (_isEditing) ...[
-            Container(
-              width: _contentWidth, // Control the width of the TextFormField
-              child: TextFormField(
-                controller: _bioController,
-                maxLength: 250,
-                decoration: const InputDecoration(
-                  labelText: 'Bio',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
+      return Align(
+        alignment: Alignment.center,
+        child: Column(
+          children: [
+            if (_isCurrentUser) ...[
+              if (_isEditing) ...[
+                Container(
+                  width: _contentWidth,  // Control the width of the TextFormField
+                  child: TextFormField(
+                    controller: _bioController,
+                    maxLength: 250,
+                    decoration: const InputDecoration(
+                      labelText: 'Bio',
+                      border: OutlineInputBorder(),
+                      alignLabelWithHint: true,
+                    ),
+                    keyboardType: TextInputType.multiline,
+                    maxLines: null,
+                  ),
                 ),
-                keyboardType: TextInputType.multiline,
-                maxLines: null,
-              ),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: _updateBio,
-              child: const Text('Save Bio'),
-            ),
-          ] else
-            ...[
-              TextButton(
-                onPressed: () => setState(() => _isEditing = true),
-                child: const Text('Edit Bio',
-                    style: TextStyle(fontSize: 16)), // Adjusted for consistency
-              ),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: _updateBio,
+                  child: const Text('Save Bio'),
+                ),
+              ] else ...[
+                TextButton(
+                  onPressed: () => setState(() => _isEditing = true),
+                  child: const Text('Edit Bio', style: TextStyle(fontSize: 16)),
+                ),
+                Container(
+                  width: _contentWidth,
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  alignment: Alignment.center,
+                  child: Text(
+                    user.bio ?? "No bio available.",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
+              ],
+            ] else ...[
               Container(
                 width: _contentWidth,
-                // Maintain the same width for the bio display
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 alignment: Alignment.center,
                 child: Text(
                   user.bio ?? "No bio available.",
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 16), // Ensure the bio text size is consistent
+                  style: const TextStyle(fontSize: 16),
                 ),
               ),
             ],
-        ],
-      ),
-    );
-  }
-
+          ],
+        ),
+      );
+    }
+    
   @override
   void dispose() {
     _bioController.dispose();

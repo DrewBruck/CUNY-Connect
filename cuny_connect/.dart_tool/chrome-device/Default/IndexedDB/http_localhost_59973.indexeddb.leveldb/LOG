@@ -1,0 +1,27 @@
+2024/05/06-17:23:45.622 a203 Reusing MANIFEST /private/var/folders/dv/j65s2bz50l58nbnb0zq23f2r0000gq/T/flutter_tools.WnTXi3/flutter_tools_chrome_device.Nd8m6p/Default/IndexedDB/http_localhost_59973.indexeddb.leveldb/MANIFEST-000001
+2024/05/06-17:23:45.622 a203 Recovering log #3
+2024/05/06-17:23:45.622 a203 Reusing old log /private/var/folders/dv/j65s2bz50l58nbnb0zq23f2r0000gq/T/flutter_tools.WnTXi3/flutter_tools_chrome_device.Nd8m6p/Default/IndexedDB/http_localhost_59973.indexeddb.leveldb/000003.log 
+2024/05/06-17:23:45.641 8307 Level-0 table #5: started
+2024/05/06-17:23:45.644 8307 Level-0 table #5: 6137 bytes OK
+2024/05/06-17:23:45.651 8307 Delete type=0 #3
+2024/05/06-17:23:45.652 8307 Manual compaction at level-0 from '\x00\x05\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x06\x00\x00\x00' @ 0 : 0; will stop at (end)
+2024/05/06-18:48:16.371 b303 Level-0 table #7: started
+2024/05/06-18:48:16.378 b303 Level-0 table #7: 6726 bytes OK
+2024/05/06-18:48:16.386 b303 Delete type=0 #4
+2024/05/06-18:48:16.387 a203 Manual compaction at level-0 from '\x00\x07\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x08\x00\x00\x00' @ 0 : 0; will stop at (end)
+2024/05/06-18:48:53.975 a203 Compacting 1@1 + 1@2 files
+2024/05/06-18:48:53.983 a203 Generated table #8@1: 68 keys, 3417 bytes
+2024/05/06-18:48:53.983 a203 Compacted 1@1 + 1@2 files => 3417 bytes
+2024/05/06-18:48:53.991 a203 compacted to: files[ 0 0 1 0 0 0 0 ]
+2024/05/06-18:48:53.992 a203 Delete type=2 #7
+2024/05/06-18:48:53.992 a203 Delete type=2 #5
+2024/05/06-19:44:05.381 b303 Level-0 table #10: started
+2024/05/06-19:44:05.389 b303 Level-0 table #10: 21865 bytes OK
+2024/05/06-19:44:05.396 b303 Delete type=0 #6
+2024/05/06-19:44:05.398 8307 Manual compaction at level-0 from '\x00\x0e\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x0f\x00\x00\x00' @ 0 : 0; will stop at (end)
+2024/05/06-19:44:43.784 a203 Compacting 1@1 + 1@2 files
+2024/05/06-19:44:43.793 a203 Generated table #11@1: 246 keys, 9781 bytes
+2024/05/06-19:44:43.793 a203 Compacted 1@1 + 1@2 files => 9781 bytes
+2024/05/06-19:44:43.803 a203 compacted to: files[ 0 0 1 0 0 0 0 ]
+2024/05/06-19:44:43.804 a203 Delete type=2 #10
+2024/05/06-19:44:43.805 a203 Delete type=2 #8

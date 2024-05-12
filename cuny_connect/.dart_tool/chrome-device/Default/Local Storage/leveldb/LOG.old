@@ -1,6 +1,13 @@
-2024/04/27-21:15:32.707 2e03 Reusing MANIFEST /private/var/folders/dv/j65s2bz50l58nbnb0zq23f2r0000gq/T/flutter_tools.sSdcV3/flutter_tools_chrome_device.SIh6Km/Default/Local Storage/leveldb/MANIFEST-000001
-2024/04/27-21:15:32.708 2e03 Recovering log #14
-2024/04/27-21:15:32.708 2e03 Reusing old log /private/var/folders/dv/j65s2bz50l58nbnb0zq23f2r0000gq/T/flutter_tools.sSdcV3/flutter_tools_chrome_device.SIh6Km/Default/Local Storage/leveldb/000014.log 
-2024/04/27-21:15:32.708 2e03 Delete type=0 #11
-2024/04/27-21:15:32.708 2e03 Delete type=0 #3
-2024/04/27-21:15:32.708 2e03 Delete type=0 #8
+2024/05/10-13:53:35.114 2507 Reusing MANIFEST /private/var/folders/dv/j65s2bz50l58nbnb0zq23f2r0000gq/T/flutter_tools.ThWUMU/flutter_tools_chrome_device.Ewj7GQ/Default/Local Storage/leveldb/MANIFEST-000001
+2024/05/10-13:53:35.115 2507 Recovering log #26
+2024/05/10-13:53:35.115 2507 Reusing old log /private/var/folders/dv/j65s2bz50l58nbnb0zq23f2r0000gq/T/flutter_tools.ThWUMU/flutter_tools_chrome_device.Ewj7GQ/Default/Local Storage/leveldb/000026.log 
+2024/05/10-13:53:35.115 2507 Delete type=0 #11
+2024/05/10-13:53:35.115 2507 Delete type=0 #14
+2024/05/10-13:53:35.115 2507 Delete type=0 #3
+2024/05/10-13:53:35.115 2507 Delete type=0 #17
+2024/05/10-13:53:35.115 2507 Delete type=2 #15
+2024/05/10-13:53:35.115 2507 Delete type=2 #7
+2024/05/10-13:53:35.115 2507 Delete type=2 #12
+2024/05/10-13:53:35.115 2507 Delete type=2 #9
+2024/05/10-13:53:35.115 2507 Delete type=0 #8
+2024/05/10-13:53:35.115 2507 Delete type=0 #23

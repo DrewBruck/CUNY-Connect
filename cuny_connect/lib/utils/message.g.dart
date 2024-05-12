@@ -22,13 +22,14 @@ class ChatMessageAdapter extends TypeAdapter<ChatMessage> {
       receiverId: (fields[2] as List).cast<String>(),
       content: fields[3] as String,
       timestamp: fields[4] as DateTime,
+      senderName: fields[5] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, ChatMessage obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.messageId)
       ..writeByte(1)
@@ -38,7 +39,9 @@ class ChatMessageAdapter extends TypeAdapter<ChatMessage> {
       ..writeByte(3)
       ..write(obj.content)
       ..writeByte(4)
-      ..write(obj.timestamp);
+      ..write(obj.timestamp)
+      ..writeByte(5)
+      ..write(obj.senderName);
   }
 
   @override

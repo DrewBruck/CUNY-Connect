@@ -2,45 +2,14 @@
 A Capstone Application to assist CUNY students communicate based on classes in schedule
 
 ## Todo List:
- - [X] Update Current Firebase Rules (Strict)
- - [X] Create a README.md
- - [X] Fix Password/Username Vulnerability
  - [X] Build Title For Each Conversation
  - [X] Conversations Page
- - [ ] Add + functions.
- - [X] Clean up Singleton Design Pattern (Firebase)
- - [ ] Lock Down Linode Server (Harden)
+ - [ ] Add + functions.(In Progress)
+ - [X] Update profile picture (Initials)
  - [ ] Add Search for all conversations of current user. 
- - [ ] Update profile picture (Initials)
- - [ ] Update Rules for Conversations (Strict)
  - [ ] Clean up debug statements
- - [ ] Add A Docs Page. 
  - [ ] Finalize the README.md
 
-## Useful Commands 
----
-
-### GitHub 
-
-__Commit and Push Files__
-
-```
-git add .
-git commit -m "Message"
-git push -u origin main
-```
-
-__Get Current Files__
-
-```
-git pull
-```
-
-__Error With Pull__
-
-```
-git reset --hard
-```
 
 ### Flutter
 __Compile a dot G File__

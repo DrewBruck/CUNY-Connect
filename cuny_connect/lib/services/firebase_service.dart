@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cuny_connect/models/CUNYUser.dart';
 import 'package:cuny_connect/utils/conversation.dart';
+import 'package:flutter/foundation.dart';
 
 class FirebaseService {
 
@@ -73,12 +76,33 @@ class FirebaseService {
 
   }
 
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>> listenForConversationChanges(){
+    return _db.collection('conversations').where('participants', arrayContains: userId)
+        .snapshots()
+        .listen((snapshot){
+          for(var change in snapshot.docChanges){
+            if (change.type == DocumentChangeType.modified){
+              print("${change.doc.data()}");
+            }
+          }
+    });
+  }
+
   Stream<List<Conversation>> conversationsStream() {
+    // if(kDebugMode){
+    //   print('Fetching conversations from Firestore');
+    // }
     return _db.collection('Conversations')
       .where('participants', arrayContains: userId)  // Ensure the user is a participant
       .snapshots()
       .asyncMap((snapshot) async {
+        // if(kDebugMode){
+        //   print('Received snapshot with ${snapshot.docs.length} documents');
+        // }
         List<Future<Conversation>> futures = snapshot.docs.map((doc) async {
+          // if(kDebugMode){
+          //   print('Processing document with ID: ${doc.id}');
+          // }
           return Conversation.fromFirestore(_db, doc.data() as Map<String, dynamic>, doc.id);
         }).toList();
         
@@ -171,6 +195,21 @@ class FirebaseService {
         print("Error");
       }
       return participants;
+    }
+
+    Future<DocumentReference> addConversation(Map<String, dynamic> conversationData) async {
+      return await _db.collection('Conversations').add(conversationData);
+    }
+  
+    Future<List<String>> fetchUserSuggestions(String query) async {
+      var snapshot = await _db.collection('Info')  // Assuming user data is stored under 'Info'
+          .orderBy('name')  // Ensure 'name' is indexed in Firestore for efficient querying
+          .startAt([query])
+          .endAt([query + '\uf8ff'])  // Using the unicode character to catch all suffixes
+          .limit(5)  // limit to however many suggestions you want to show
+          .get();
+      return snapshot.docs.map((doc) => '${doc.id}:${doc['name']}').toList();
+      //return snapshot.docs.map((doc) => doc.data()['name'] as String).toList();
     }
 
 }

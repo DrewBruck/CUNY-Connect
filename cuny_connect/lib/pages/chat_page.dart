@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cuny_connect/pages/profile.dart';
 import 'package:cuny_connect/services/firebase_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:intl/intl.dart';
@@ -30,6 +31,8 @@ class _ChatPageState extends State<ChatPage> {
   List<String> receiverNames = [];
   final FirebaseService firebaseService = FirebaseService();
   String title = "";
+  String senderName = "";
+  Map<int, String> cachedNames = {};
   _ChatPageState(this.conversationId);
 
   @override
@@ -48,15 +51,17 @@ class _ChatPageState extends State<ChatPage> {
       receiverNames = await firebaseService.fetchParticipants(conversationId);
       receiverNames.removeWhere((id) => id == userID);
 
-      if (!isAdmin) {
-        if (receiverNames.isNotEmpty) {
+
+      if (receiverNames.isNotEmpty && receiverNames.length < 2) {
+        if(!isAdmin) {
           String title = await firebaseService.getUserName(receiverNames.first);
           return title;
         }
       }
-      
+
+
       // Return adminTitle or empty if not available
-      return adminDetails['adminTitle'] ?? ''; 
+      return adminDetails['adminTitle'] ?? '';
   }
 
 
@@ -146,6 +151,7 @@ class _ChatPageState extends State<ChatPage> {
             senderId: data['senderId'],
             receiverId: data['receiverId'],
             content: data['content'],
+            senderName: data['senderName'],
             timestamp: DateTime.parse(data['timestamp']),
           ));
         });
@@ -165,13 +171,16 @@ class _ChatPageState extends State<ChatPage> {
       final senderId = userID;
       final List<String> receiverIds = receiverNames;
       final List<String> authUsers = receiverNames;
-      authUsers.add(senderId);
+      senderName = await firebaseService.getUserName(userID);
+      if(!authUsers.contains(senderId)){ authUsers.add(senderId); }
+      receiverIds.removeWhere((id) => id == userID);
 
       final message = ChatMessage(
         messageId: messageId,
         senderId: senderId,
         receiverId: receiverIds,
         content: content,
+        senderName: senderName,
         timestamp: DateTime.now(),
       );
 
@@ -179,6 +188,7 @@ class _ChatPageState extends State<ChatPage> {
         'senderId': senderId,
         'receiverId': receiverIds,
         'content': content,
+        'senderName': senderName,
         'timestamp': DateTime.now(),
       });
 
@@ -202,66 +212,69 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-void _showParticipantsDialog() {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text('Participants'),
-        content: Container(
-          width: double.minPositive, // Set the width to minimum if necessary
-          height: 300, // Set a fixed height or make it dynamic based on content
-          child: ListView.builder(
-            itemCount: receiverNames.length,
-            itemBuilder: (BuildContext context, int index) {
-              return FutureBuilder<String>(
-                future: firebaseService.getUserName(receiverNames[index]),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-                    return ListTile(
-                      title: Text(snapshot.data!),
-                      onTap: () {
-                        Navigator.of(context).pop(); // Close the dialog first
-                        Navigator.push(context, MaterialPageRoute(
-                          builder: (context) => ProfilePage(userId: receiverNames[index]),
-                        ));
-                      },
+  void _showParticipantsDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Participants'),
+          content: Container(
+            width: double.minPositive,
+            height: 300,
+            child: ListView.builder(
+              itemCount: receiverNames.length,
+              itemBuilder: (BuildContext context, int index) {
+                final userId = receiverNames[index];
+                return FutureBuilder<String>(
+                  future: cachedNames.containsKey(index) ?
+                          Future.value(cachedNames[index]) :
+                          firebaseService.getUserName(userId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.done) {
+                      if (snapshot.hasData) {
+                        cachedNames[index] = snapshot.data!;
+                        return ListTile(
+                          title: Text(snapshot.data!),
+                          onTap: () {
+                            Navigator.of(context).pop(); // Close the dialog first
+                            Navigator.push(context, MaterialPageRoute(
+                              builder: (context) => ProfilePage(userId: userId),
+                            ));
+                          },
+                        );
+                      } else if (snapshot.hasError) {
+                        return const ListTile(
+                          title: Text('Error loading'),
+                        );
+                      }
+                    }
+                    return const ListTile(
+                      //title: CircularProgressIndicator(),
                     );
-                  } else if (snapshot.hasError) {
-                    return ListTile(
-                      title: Text('Error loading'),
-                    );
-                  }
-                  return ListTile(
-                    title: CircularProgressIndicator(),
-                  );
-                },
-              );
-            },
+                  },
+                );
+              },
+            ),
           ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            child: Text('Close'),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      );
-    },
-  );
-}
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Close'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-@override
 Widget build(BuildContext context) {
-  // Determine if it's a group chat
   bool isGroupChat = receiverNames.length > 1;
-  String lastSenderId = ""; // Initialize an empty string to keep track of the last message's sender
 
   return Scaffold(
     appBar: AppBar(
-      iconTheme: IconThemeData(color: Colors.white),
+      iconTheme: const IconThemeData(color: Colors.white),
       title: InkWell(
         onTap: () {
           if (isGroupChat) {
@@ -270,7 +283,7 @@ Widget build(BuildContext context) {
             Navigator.push(context, MaterialPageRoute(builder: (context) => ProfilePage(userId: receiverNames.first)));
           }
         },
-        child: Text(title, style: TextStyle(color: Colors.white)),
+        child: Text(title, style: const TextStyle(color: Colors.white)),
       ),
       centerTitle: true,
       backgroundColor: Theme.of(context).primaryColor,
@@ -286,71 +299,107 @@ Widget build(BuildContext context) {
               final message = _messages[index];
               final formattedTime = DateFormat('yyyy-MM-dd – hh:mm a').format(message.timestamp);
               bool isSentByUser = (message.senderId == userID);
-              bool shouldDisplaySenderName = isGroupChat && (lastSenderId != message.senderId);
-              lastSenderId = message.senderId; // Update lastSenderId to the current one for the next iteration
 
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  double maxWidth = constraints.maxWidth * 0.70;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10.0),
-                    child: Row(
-                      mainAxisAlignment: isSentByUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-                      children: [
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: maxWidth,
+              // Check if this is the last element in the list
+              bool isLastElement = index == _messages.length - 1;
+
+              // Check if the current message sender is different from the previous one
+              bool isDifferentSender = index < _messages.length - 1 && _messages[index + 1].senderId != message.senderId;
+
+              return Column(
+                children: [
+                  // Named divider for the end of conversation
+                  if (isLastElement && isGroupChat)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Divider(color: Colors.grey[300], height: 1),
                           ),
-                          child: Column(
-                            crossAxisAlignment: isSentByUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                            children: [
-                              if (shouldDisplaySenderName)
-                                FutureBuilder<String>(
-                                  future: firebaseService.getUserName(message.senderId),
-                                  builder: (context, snapshot) {
-                                    if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-                                      return Container(
-                                        padding: const EdgeInsets.only(left: 25, right: 25, bottom: 1),
-                                        child: Text(
-                                          snapshot.data!,
-                                          style: TextStyle(color: Colors.grey[700]),
-                                          textAlign: isSentByUser ? TextAlign.right : TextAlign.left,
-                                        ),
-                                      );
-                                    } else {
-                                      return const SizedBox(); // Placeholder widget
-                                    }
-                                  },
-                                ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                                margin: EdgeInsets.only(left: isSentByUser ? 10 : 10, right: isSentByUser ? 10 : 10),
-                                decoration: BoxDecoration(
-                                  color: isSentByUser ? Colors.purple[100] : Colors.grey[300],
-                                  borderRadius: BorderRadius.circular(15.0),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      message.content,
-                                      style: const TextStyle(color: Colors.black),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      formattedTime,
-                                      style: TextStyle(color: Colors.black.withOpacity(0.6), fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Text(
+                              _messages[_messages.length - 1].senderName.toUpperCase(),
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
-                      ],
+                          Expanded(
+                            child: Divider(color: Colors.grey[300], height: 1),
+                          ),
+                        ],
+                      ),
                     ),
-                  );
-                },
+
+                  // Conditional named divider for different sender
+                  if (isDifferentSender && isGroupChat)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Divider(color: Colors.grey[300], height: 1),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Text(
+                              _messages[index].senderName.toUpperCase(),
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(color: Colors.grey[300], height: 1),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      double maxWidth = constraints.maxWidth * 0.70;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2.0),
+                        child: Column(
+                          crossAxisAlignment: isSentByUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: isSentByUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+                              children: [
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: maxWidth,
+                                  ),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+                                    margin: const EdgeInsets.only(left: 10, right: 10),
+                                    decoration: BoxDecoration(
+                                      color: isSentByUser ? Colors.purple[100] : Colors.grey[300],
+                                      borderRadius: BorderRadius.circular(20.0),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          message.content,
+                                          style: const TextStyle(color: Colors.black),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          formattedTime,
+                                          style: TextStyle(color: Colors.black.withOpacity(0.6), fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
               );
             },
           ),
@@ -391,59 +440,4 @@ Widget build(BuildContext context) {
       ),
     );
   }
-
-  void _toggleConnection() {
-    if (_isConnected) {
-      disconnectFromServer();
-    } else {
-      connectToServer();
-    }
-    if(mounted){ // Part of the StatefulWidget class.
-      setState(() {
-        _isConnected = !_isConnected;
-      });
-    }
-  }
-
 }
-
-
-
-
-// Conversations            : Collection
-// ├─ conversationID        : String
-// │  ├─ participants       : Array
-// │  ├─ messages           : Sub-Collection
-// │  │  ├─ messageID       : String
-// │  │  │  ├─ content      : String
-// │  │  │  ├─ receiverID   : Array
-// │  │  │  ├─ senderID     : String
-// │  │  │  ├─ timeStamp    : String
-
-
-
-
-// conversationRef.get().then((docSnapshot){
-//   if(docSnapshot.exists){
-//     print("Document Data: ${docSnapshot.data()}");
-//   }else{
-//     print("Document does not exist!!!!!!!!!!!!");
-//   }
-// }).catchError((error){
-//   print("ERROR: $error");
-// });
-// conversationRef.collection('messages').get().then((docSnapshot){
-//   if(docSnapshot.docs.isEmpty){
-//     print("No messages found in this conversation.");
-//   }else{
-//     for(var doc in docSnapshot.docs) {
-//       print("MessageID: ${doc.id}, Data: ${doc.data()}");
-//     }
-//   }
-// }).catchError((error){
-//   print("ERROR: $error");
-// });
-
-// final messagesSnapshot = await FirebaseFirestore.instance.doc(
-// '/Conversations/RVYBfcgdVON6paEWTsrW/messages/7MAkimrs8UtfOE3nJ0LK')
-// .get();

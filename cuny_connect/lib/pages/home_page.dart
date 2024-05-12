@@ -2,6 +2,7 @@ import 'package:cuny_connect/pages/schedule.dart';
 import 'package:flutter/material.dart';
 import 'package:cuny_connect/services/firebase_service.dart';
 import 'profile.dart';
+import 'conversation_creator.dart';
 import 'chat_log_page.dart';  // Importing ChatLogPage
 import 'package:cuny_connect/models/CUNYUser.dart';
 
@@ -54,6 +55,10 @@ class _HomePageState extends State<HomePage> {
         leading: IconButton(
           onPressed: () {
             // Code to trigger a new text message or navigate to a message composition page
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ConversationCreator()),
+            );
           },
           icon: const Icon(Icons.add_comment_outlined, color: Colors.white),
         ),

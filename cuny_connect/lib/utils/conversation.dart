@@ -44,5 +44,6 @@ class Conversation extends HiveObject {
 
     return Conversation(conversationIds: id, messages: messages, participants: participants, isAdmin: isAdmin, adminTitle: adminTitle);
   }
+
 }
 

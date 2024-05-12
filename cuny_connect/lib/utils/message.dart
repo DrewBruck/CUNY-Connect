@@ -14,8 +14,10 @@ class ChatMessage extends HiveObject {
   String content;
   @HiveField(4)
   DateTime timestamp;
+  @HiveField(5)
+  String senderName;
 
-  ChatMessage({required this.messageId, required this.senderId, required this.receiverId, required this.content, required this.timestamp});
+  ChatMessage({required this.messageId, required this.senderId, required this.receiverId, required this.content, required this.timestamp, required this.senderName});
 
   factory ChatMessage.fromFirestore(Map<String, dynamic> firestoreData, String id) {
     return ChatMessage(
@@ -23,6 +25,7 @@ class ChatMessage extends HiveObject {
       senderId: firestoreData['senderId'],
       receiverId: List<String>.from(firestoreData['receiverId']),
       content: firestoreData['content'],
+      senderName: firestoreData['senderName'],
       timestamp: firestoreData['timestamp'].toDate(),
     );
   }

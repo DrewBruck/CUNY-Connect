@@ -35,7 +35,7 @@ class Conversation extends HiveObject {
       // Fetch messages from the subcollection
       var messagesSnapshot = await db.collection('Conversations').doc(id).collection('messages').orderBy('timestamp').get();
       messages = messagesSnapshot.docs
-          .map((doc) => ChatMessage.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
+          .map((doc) => ChatMessage.fromFirestore(doc.data(), doc.id))
           .toList();
 
     }catch(e){

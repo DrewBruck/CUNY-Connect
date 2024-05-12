@@ -8,7 +8,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cuny_connect/utils/message.dart';
 
-import '../utils/conversation.dart';
 
 class ChatPage extends StatefulWidget {
   final String conversationId;
@@ -89,7 +88,7 @@ class _ChatPageState extends State<ChatPage> {
         // Iterate over the documents in the snapshot.
         for (var doc in messagesSnapshot.docs) {
           final message = ChatMessage.fromFirestore(
-              doc.data() as Map<String, dynamic>, doc.id);
+              doc.data(), doc.id);
           tempMessages.add(message);
 
           // Store the message in Hive.
@@ -97,7 +96,7 @@ class _ChatPageState extends State<ChatPage> {
         }
         if(mounted){
           setState(() {
-            _messages = box.values.toList().reversed.toList();;
+            _messages = box.values.toList().reversed.toList();
           });
         }
       }catch(e){
@@ -122,7 +121,7 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
-    Hive.box<ChatMessage>('messages_${conversationId}').close();  // Close the specific Hive box
+    Hive.box<ChatMessage>('messages_$conversationId').close();  // Close the specific Hive box
     disconnectFromServer();
     _controller.dispose();
     _scrollController.dispose();
@@ -207,8 +206,8 @@ void _showParticipantsDialog() {
     context: context,
     builder: (BuildContext context) {
       return AlertDialog(
-        title: Text('Participants'),
-        content: Container(
+        title: const Text('Participants'),
+        content: SizedBox(
           width: double.minPositive, // Set the width to minimum if necessary
           height: 300, // Set a fixed height or make it dynamic based on content
           child: ListView.builder(
@@ -228,11 +227,11 @@ void _showParticipantsDialog() {
                       },
                     );
                   } else if (snapshot.hasError) {
-                    return ListTile(
+                    return const ListTile(
                       title: Text('Error loading'),
                     );
                   }
-                  return ListTile(
+                  return const ListTile(
                     title: CircularProgressIndicator(),
                   );
                 },
@@ -242,7 +241,7 @@ void _showParticipantsDialog() {
         ),
         actions: <Widget>[
           TextButton(
-            child: Text('Close'),
+            child: const Text('Close'),
             onPressed: () {
               Navigator.of(context).pop();
             },
@@ -261,7 +260,7 @@ Widget build(BuildContext context) {
 
   return Scaffold(
     appBar: AppBar(
-      iconTheme: IconThemeData(color: Colors.white),
+      iconTheme: const IconThemeData(color: Colors.white),
       title: InkWell(
         onTap: () {
           if (isGroupChat) {
@@ -270,7 +269,7 @@ Widget build(BuildContext context) {
             Navigator.push(context, MaterialPageRoute(builder: (context) => ProfilePage(userId: receiverNames.first)));
           }
         },
-        child: Text(title, style: TextStyle(color: Colors.white)),
+        child: Text(title, style: const TextStyle(color: Colors.white)),
       ),
       centerTitle: true,
       backgroundColor: Theme.of(context).primaryColor,

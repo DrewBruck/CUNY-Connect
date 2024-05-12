@@ -2,7 +2,7 @@ import 'package:cuny_connect/pages/schedule.dart';
 import 'package:flutter/material.dart';
 import 'package:cuny_connect/services/firebase_service.dart';
 import 'profile.dart';
-import 'chat_log_page.dart';  // Importing ChatLogPage
+import 'chat_log_page.dart'; // Importing ChatLogPage
 import 'package:cuny_connect/models/CUNYUser.dart';
 
 // StatefulWidget is the superclass
@@ -17,7 +17,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-
   //////////////////////////////////////////////////////////////////////////////
   /// Internal Variables
 
@@ -27,19 +26,19 @@ class _HomePageState extends State<HomePage> {
 
   // Widget that deals with all the conversations.
   List<Widget> _widgetOptions() => [
-    FutureBuilder<CUNYUser?>(
-      future: firebaseService.getCurrentUser(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text("Error: ${snapshot.error}"));
-        }
-        return ChatLogPage();  // Assuming user is successfully fetched, show chat log.
-      },
-    ),
-    const SchedulePage(),
-  ];
+        FutureBuilder<CUNYUser?>(
+          future: firebaseService.getCurrentUser(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text("Error: ${snapshot.error}"));
+            }
+            return ChatLogPage(); // Assuming user is successfully fetched, show chat log.
+          },
+        ),
+        const SchedulePage(),
+      ];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -57,7 +56,8 @@ class _HomePageState extends State<HomePage> {
           },
           icon: const Icon(Icons.add_comment_outlined, color: Colors.white),
         ),
-        title: const Text('CUNY Connect', style: TextStyle(color: Colors.white)),
+        title:
+            const Text('CUNY Connect', style: TextStyle(color: Colors.white)),
         actions: [
           IconButton(
             onPressed: () {

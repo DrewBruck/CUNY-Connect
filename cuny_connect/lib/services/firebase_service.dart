@@ -79,7 +79,7 @@ class FirebaseService {
       .snapshots()
       .asyncMap((snapshot) async {
         List<Future<Conversation>> futures = snapshot.docs.map((doc) async {
-          return Conversation.fromFirestore(_db, doc.data() as Map<String, dynamic>, doc.id);
+          return Conversation.fromFirestore(_db, doc.data(), doc.id);
         }).toList();
         
         // Wait for all Conversation objects to be created
@@ -103,7 +103,7 @@ class FirebaseService {
       print("Bio updated successfully for UID: $uid");
     } catch (e) {
       print("Error updating user bio: $e");
-      throw e; // Rethrow the error if you need to handle it further up the call stack.
+      rethrow; // Rethrow the error if you need to handle it further up the call stack.
     }
   }
 

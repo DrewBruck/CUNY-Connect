@@ -1,0 +1,9 @@
+{
+  "projects": {
+    "default": "cuny-connect",
+    "cuny-connect": "cuny-connect"
+  },
+  "targets": {},
+  "etags": {},
+  "dataconnectEmulatorConfig": {}
+}

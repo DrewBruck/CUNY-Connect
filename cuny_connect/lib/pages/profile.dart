@@ -1,10 +1,14 @@
+import 'package:cuny_connect/pages/socket_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cuny_connect/auth/auth_gate.dart';
 import 'package:cuny_connect/services/firebase_service.dart';
 import 'package:cuny_connect/models/CUNYUser.dart';
+import 'package:provider/provider.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  final String? userId;
+  const ProfilePage({Key? key, this.userId}) : super(key: key);
 
   @override
   _ProfilePageState createState() => _ProfilePageState();
@@ -14,20 +18,32 @@ class _ProfilePageState extends State<ProfilePage> {
   final FirebaseService _firebaseService = FirebaseService();
   final TextEditingController _bioController = TextEditingController();
   bool _isEditing = false;
-  final double _contentWidth = 500; // Set a fixed width for the content
+  late bool _isCurrentUser;
 
   @override
   void initState() {
     super.initState();
+    _isCurrentUser = FirebaseAuth.instance.currentUser!.uid == widget.userId || widget.userId == null;
   }
 
   void _updateBio() async {
     if (_bioController.text.length <= 250) {
-      final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
-      await _firebaseService.updateUserBio(currentUserId, _bioController.text);
+      await _firebaseService.updateUserBio(FirebaseAuth.instance.currentUser!.uid, _bioController.text);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bio updated successfully!')));
       setState(() => _isEditing = false);
     }
+  }
+
+  void _signOut() async {
+    final socketService = Provider.of<SocketService>(context, listen: false);
+    await socketService.handleLogout(); // Call handleLogout to clear Hive data
+    await FirebaseAuth.instance.signOut();
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AuthGate()));
+  }
+
+  Future<CUNYUser?> _fetchUserProfile() async {
+    String userId = widget.userId ?? FirebaseAuth.instance.currentUser!.uid;
+    return await _firebaseService.getUserProfile(userId);
   }
 
   @override
@@ -35,119 +51,93 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text("Profile Page", style: TextStyle(color: Colors.white, fontSize: 20)),
+        title: const Text("Profile", style: TextStyle(color: Colors.white, fontFamily: 'SF Pro Display')),
         backgroundColor: Theme.of(context).primaryColor,
       ),
-      body: FutureBuilder<CUNYUser?>(
-        future: _firebaseService.getUserProfile(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData) {
-            return const Center(child: Text('No profile data available.'));
-          }
-          final user = snapshot.data!;
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                Container(
-                  color: Colors.grey[200], // Upper background color
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 20),
-                      _profileIcon(),
-                      const SizedBox(height: 20),
-                      Container(),
-                    ],
-                  ),
-                ),
-                _buildDivider(context),
-                const SizedBox(height: 20),
-                if (_isEditing) _buildBioSection(user) else
-                  Container(
-                  width: _contentWidth,
-                  color: Colors.white, // Lower background color
-                  child: Column(
-                    children: [
-                      if (!_isEditing) _buildBioSection(user),
-                      const SizedBox(height: 20),
-                      Container(
-                        alignment: Alignment.centerLeft,
-                        child: Column(
-                          children: _infoCards(user),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _profileIcon() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.black,
-          width: 4,
-        ),
-      ),
-      child: const CircleAvatar(
-        radius: 60,
-        backgroundColor: Colors.transparent,
-        child: Icon(Icons.person, size: 120),
-      ),
-    );
-  }
-
-  Widget _buildDivider(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
+      body: SingleChildScrollView(
+        child: Center(
           child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 2),
-            height: 2,
-            color: Colors.black,
+            width: 600,
+            padding: const EdgeInsets.all(25),
+            child: FutureBuilder<CUNYUser?>(
+              future: _fetchUserProfile(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
+                }
+                if (!snapshot.hasData) {
+                  return const Text('No profile data available.');
+                }
+                CUNYUser user = snapshot.data!;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _buildProfilePicture(user),
+                    const SizedBox(height: 10),
+                    Text(user.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'SF Pro Display')),
+                    const SizedBox(height: 20),
+                    _buildInfoBubble(user),
+                    const SizedBox(height: 20),
+                    _buildBioSection(user),
+                    const SizedBox(height: 20),
+                    if (_isCurrentUser) _buildSignOutButton(),
+                  ],
+                );
+              },
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 
-  List<Widget> _infoCards(CUNYUser user) {
-    return [
-      _infoCard('Name', user.name),
-      _infoCard('Email', user.email),
-      _infoCard('Major', user.major),
-      _infoCard('Schedule', user.schedule.join(', ')),
-    ];
+  Widget _buildProfilePicture(CUNYUser user) {
+    return CircleAvatar(
+      radius: 100,
+      backgroundColor: Colors.purple[50],
+      child: Text(
+        user.name.isNotEmpty ? user.name[0] : 'U',
+        style: const TextStyle(fontSize: 100, fontWeight: FontWeight.bold, fontFamily: 'SF Pro Display'),
+      ),
+    );
   }
 
-  Widget _infoCard(String title, String info) {
+  Widget _buildInfoBubble(CUNYUser user) {
+    return Container(
+      width: 600,
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.purple[50],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          _infoRow(Icons.email, user.email),
+          const Padding(
+            padding: EdgeInsets.only(left: 48.0),
+            child: Divider(color: Colors.black54, thickness: 1),
+          ),
+          _infoRow(Icons.school, user.major),
+          const Padding(
+            padding: EdgeInsets.only(left: 48.0),
+            child: Divider(color: Colors.black54, thickness: 1),
+          ),
+          _infoRow(Icons.schedule, user.schedule.join(', ')),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String info) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 50.0), // Increase horizontal padding for alignment
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
+          Icon(icon, size: 28, color: Colors.deepPurple),
+          const SizedBox(width: 20),
           Expanded(
-            child: Text(
-              "$title: ",
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18), // Increased font size
-            ),
-          ),
-          Expanded(
-            flex: 2, // Adjust flex to give more space for the info text
-            child: Text(
-              info,
-              style: const TextStyle(fontSize: 16), // Increased font size for info text
-            ),
+            child: Text(info, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'SF Pro Display')),
           ),
         ],
       ),
@@ -155,47 +145,65 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildBioSection(CUNYUser user) {
-    return Align(
-      alignment: Alignment.center,
-      child: Column(
+    return Container(
+      width: 600,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.purple[50],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          if (_isEditing) ...[
-            Container(
-              width: _contentWidth, // Control the width of the TextFormField
-              child: TextFormField(
-                controller: _bioController,
-                maxLength: 250,
-                decoration: const InputDecoration(
-                  labelText: 'Bio',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                ),
-                keyboardType: TextInputType.multiline,
-                maxLines: null,
+          const Icon(Icons.description, size: 28, color: Colors.deepPurple),
+          const SizedBox(width: 20),
+          Expanded(
+            child: _isEditing ? TextFormField(
+              controller: _bioController,
+              decoration: const InputDecoration(
+                labelText: 'Edit Bio',
+                border: OutlineInputBorder(),
               ),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: _updateBio,
-              child: const Text('Save Bio'),
-            ),
-          ] else ...[
-            TextButton(
-              onPressed: () => setState(() => _isEditing = true),
-              child: const Text('Edit Bio', style: TextStyle(fontSize: 16)), // Adjusted for consistency
-            ),
-            Container(
-              width: _contentWidth, // Maintain the same width for the bio display
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              alignment: Alignment.center,
-              child: Text(
-                user.bio ?? "No bio available.",
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16), // Ensure the bio text size is consistent
-              ),
+              autofocus: true,
+              onFieldSubmitted: (_) => _updateBio(),
+            ) : Text(user.bio ?? "No bio available.", style: const TextStyle(fontSize: 16, fontFamily: 'SF Pro Display')),
+          ),
+          if (_isCurrentUser && !_isEditing) ...[
+            IconButton(
+              icon: Icon(_isEditing ? Icons.check : Icons.edit, color: Colors.deepPurple),
+              onPressed: () {
+                if (_isEditing) {
+                  _updateBio();
+                } else {
+                  setState(() {
+                    _isEditing = true;
+                    _bioController.text = user.bio ?? "";
+                  });
+                }
+              },
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildSignOutButton() {
+    return InkWell(
+      onTap: _signOut,
+      child: Container(
+        width: 600,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.purple[50],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Center(
+          child: Text(
+            "Sign Out",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+          ),
+        ),
       ),
     );
   }
@@ -206,5 +214,3 @@ class _ProfilePageState extends State<ProfilePage> {
     super.dispose();
   }
 }
-             
-

@@ -1,0 +1,910 @@
+Here is my current structure. The goal is to get this structure to use hive
+since hive is fast. Basically, the goal is to have hive store all the messages
+and conversations of the current user. Basically, firebase should give us
+the information once on the start of the program. Then once we get all 
+the conversations we then soly use websocket to transfer messages to and 
+from users. However over time we sync in batches the information into firebase. 
+
+The motivation for hive is to speed up the process of accessing and building
+the flutter UI. Thats the problem with my current structure. 
+
+Basically, what I need from you is to show how we can set up the hive system 
+such that it will update the conversations, messages in real time so that I can
+use it in multiple pages. Basically, the conversation creater should create a 
+conversation update firebase but should also update the hive conversations. 
+
+For instance, the second websocket io sends a message from one user to another
+we should move the conversation up to the top. This should change the UI 
+such that when it moves it to the top it does not load the screen. It does 
+very well. At the very least it will show a green circle that is filled in 
+telling the user there was a update. And once the user goes from the log page to 
+the chat page or another pages the ui gets updated. But messages should always 
+be updated in real time. No mater what. Thank you!!
+
+THE UI SHOULD NOT CHANGE BUT THE CODE SHOULD CHANGE.
+
+main.dart
+---------
+
+import 'package:cuny_connect/auth/auth_gate.dart';
+import 'package:cuny_connect/firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+
+void main() async {
+
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  runApp(const MyApp());
+
+} 
+
+
+
+
+message.dart
+------------
+
+import 'package:hive/hive.dart';
+
+part 'message.g.dart';
+
+@HiveType(typeId: 1)
+class ChatMessage extends HiveObject {
+  @HiveField(0)
+  String messageId;
+  @HiveField(1)
+  String senderId;
+  @HiveField(2)
+  List<String> receiverId;
+  @HiveField(3)
+  String content;
+  @HiveField(4)
+  DateTime timestamp;
+  @HiveField(5)
+  String senderName;
+
+  ChatMessage({required this.messageId, required this.senderId, required this.receiverId, required this.content, required this.timestamp, required this.senderName});
+
+  factory ChatMessage.fromFirestore(Map<String, dynamic> firestoreData, String id) {
+    return ChatMessage(
+      messageId: id,
+      senderId: firestoreData['senderId'],
+      receiverId: List<String>.from(firestoreData['receiverId']),
+      content: firestoreData['content'],
+      senderName: firestoreData['senderName'],
+      timestamp: firestoreData['timestamp'].toDate(),
+    );
+  }
+}
+
+
+conversations.dart
+------------------
+
+import 'package:hive/hive.dart';
+import 'package:cuny_connect/utils/message.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+part 'conversation.g.dart';
+
+@HiveType(typeId: 2)
+class Conversation extends HiveObject {
+  @HiveField(0)
+  String conversationIds;
+  @HiveField(1)
+  List<ChatMessage> messages; // Ensure this is ready to store fetched messages.
+  @HiveField(2)
+  List<String> participants;
+  @HiveField(3)
+  DateTime? lastMessageTime;
+  @HiveField(4)
+  String adminTitle;
+  @HiveField(5)
+  bool isAdmin;
+
+  
+  Conversation({required this.conversationIds, required this.messages, required this.participants, required this.adminTitle, required this.isAdmin}) {
+    lastMessageTime = messages.isNotEmpty ? messages.last.timestamp : null;
+  }
+  
+  // Adjust fromFirestore to handle message fetching
+  static Future<Conversation> fromFirestore(FirebaseFirestore db, Map<String, dynamic> firestoreData, String id) async {
+    List<String> participants = List<String>.from(firestoreData['participants']);
+    List<ChatMessage> messages = [];
+    bool isAdmin = firestoreData['isAdmin'];
+    String adminTitle = firestoreData['adminTitle'];
+
+    try{
+      // Fetch messages from the subcollection
+      var messagesSnapshot = await db.collection('Conversations').doc(id).collection('messages').orderBy('timestamp').get();
+      messages = messagesSnapshot.docs
+          .map((doc) => ChatMessage.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
+
+    }catch(e){
+      print(e);
+    }
+
+    return Conversation(conversationIds: id, messages: messages, participants: participants, isAdmin: isAdmin, adminTitle: adminTitle);
+  }
+
+}
+
+
+conversation_creator.dart
+------------------------- 
+
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cuny_connect/services/firebase_service.dart';
+import 'package:flutter/services.dart';
+
+class ConversationCreator extends StatefulWidget {
+  const ConversationCreator({super.key});
+
+  @override
+  _ConversationCreatorState createState() => _ConversationCreatorState();
+}
+
+class _ConversationCreatorState extends State<ConversationCreator> {
+  final TextEditingController _groupNameController = TextEditingController();
+  final TextEditingController _initialMessageController = TextEditingController(text: "Hello! This is the start of your conversation.");
+  Map<String, String> _participants = {}; // userID: userName
+  final FirebaseService _firebaseService = FirebaseService();
+  TextEditingController _autocompleteController = TextEditingController();
+  FocusNode _autocompleteFocusNode = FocusNode();
+  final Map<String, String> _nameToIdMap = {}; 
+
+  @override
+  void initState() {
+    super.initState();
+    _addCurrentUser();
+  }
+
+  void _addCurrentUser() {
+    String currentUserId = _firebaseService.userId;
+    _firebaseService.getUserName(currentUserId).then((userName) {
+      setState(() {
+        _participants[currentUserId] = userName ?? 'Current User'; // Assuming getUserName might return null
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        iconTheme: const IconThemeData(color: Colors.white),
+        centerTitle: true,
+        backgroundColor: Theme.of(context).primaryColor,
+        title: const Text("Create Conversation", style: const TextStyle(color: Colors.white)),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: <Widget>[
+            Autocomplete<String>(
+              optionsBuilder: (TextEditingValue textEditingValue) async {
+                if (textEditingValue.text.isEmpty) {
+                  return const Iterable<String>.empty();
+                }
+                else { if (kDebugMode) { print(textEditingValue.text); } }
+
+                var suggestions = await _firebaseService.fetchUserSuggestions(textEditingValue.text);
+                _nameToIdMap.clear();
+                for (var suggestion in suggestions) {
+                  var details = suggestion.split(':');
+                  if (details.length >= 2 && details[0] != _firebaseService.userId) {
+                    _nameToIdMap[details[1]] = details[0]; // Populate the map with userName: userId
+                  }
+                }
+
+                return _nameToIdMap.keys; // Return only names
+              },
+              onSelected: (String userName) {
+                String? userId = _nameToIdMap[userName];
+                if (userId != null && userId != _firebaseService.userId) {
+                  _addParticipant(userId, userName);
+                  _autocompleteController.clear();
+                  setState(() {
+                    _autocompleteController.text = ' ';
+                    _autocompleteController.text = '';
+                  });
+                  FocusScope.of(context).requestFocus(FocusNode()); // Explicitly shift the focus
+                }
+              },
+              fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                _autocompleteController = textEditingController;
+                _autocompleteFocusNode = focusNode;
+                return TextFormField(
+                  controller: _autocompleteController,
+                  focusNode: _autocompleteFocusNode,
+                  decoration: const InputDecoration(
+                    labelText: 'Search users',
+                    hintText: 'Start typing...',
+                  ),
+                );
+              },
+            ),
+            if (_participants.length > 2) // Only show when more than two users are present
+              TextFormField(
+                controller: _groupNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Group Name',
+                  hintText: 'Enter a name for the group',
+                  counterText: '',
+                ),
+                maxLength: 30,
+                maxLengthEnforcement: MaxLengthEnforcement.enforced,
+              ),
+            TextFormField(
+              controller: _initialMessageController,
+              decoration: const InputDecoration(
+                labelText: 'Initial Message',
+                hintText: 'Enter the initial message',
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed:  (_participants.length > 1) ? _createConversation : null,
+              child: const Text('Create Conversation'),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _participants.length,
+                itemBuilder: (context, index) {
+                  String userId = _participants.keys.elementAt(index);
+                  String userName = _participants[userId]!;
+                  return ListTile(
+                    title: Text(userName),
+                    trailing: userId != _firebaseService.userId ? IconButton(
+                      icon: const Icon(Icons.remove_circle_outline),
+                      onPressed: () => _removeParticipant(userId),
+                    ) : null,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _addParticipant(String userId, String userName) {
+    if (!_participants.containsKey(userId)) {
+      setState(() {
+        _participants[userId] = userName;
+      });
+    }
+  }
+
+  void _removeParticipant(String userId) {
+    if (userId != _firebaseService.userId) { // Prevent removing current user
+      setState(() {
+        _participants.remove(userId);
+      });
+    }
+  }
+
+  void _createConversation() async {
+    if (_participants.isNotEmpty) {
+      Map<String, dynamic> newConversation = {
+        'participants': _participants.keys.toList(),
+        'isAdmin': false,
+        'adminTitle': _participants.length > 2 ? _groupNameController.text : "",
+      };
+
+      try {
+        DocumentReference conversationRef = await _firebaseService.addConversation(newConversation);
+        if (kDebugMode) {
+          print('Conversation created with ID: ${conversationRef.id}');
+        }
+        await _addInitialMessage(conversationRef.id, conversationRef);
+        Navigator.pop(context);
+      } catch (e) {
+        if (kDebugMode) {
+          print('Failed to create conversation: $e');
+        }
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error creating conversation')));
+      }
+    }
+  }
+
+  Future<void> _addInitialMessage(String conversationId, DocumentReference conversationRef) async {
+    String senderId = _firebaseService.userId;
+    String senderName = await _firebaseService.getUserName(senderId);
+    // Create a list of receiver IDs by filtering out the current user's ID
+    List<String> receiverIds = _participants.keys.where((id) => id != senderId).toList();
+
+    Map<String, dynamic> messageData = {
+      'content': _initialMessageController.text,
+      'receiverId': receiverIds,
+      'senderId': senderId,
+      'senderName': senderName,
+      'timestamp': Timestamp.now(),
+    };
+
+    try {
+      await conversationRef.collection('messages').add(messageData);
+      if (kDebugMode) {
+        print('Initial message added successfully.');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Failed to add initial message: $e');
+      }
+    }
+  }
+}
+
+
+chatpage.dart
+-------------
+
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:cuny_connect/services/firebase_service.dart';
+import 'package:cuny_connect/pages/chat_page.dart';
+import 'package:cuny_connect/utils/conversation.dart';
+import 'dart:async';
+
+class ChatLogPage extends StatefulWidget {
+  final FirebaseService _firebaseService = FirebaseService();
+
+  ChatLogPage({super.key});
+
+  @override
+  _ChatLogPageState createState() => _ChatLogPageState();
+}
+
+class _ChatLogPageState extends State<ChatLogPage> {
+  late Stream<List<Conversation>> _conversationsStream;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeStream();
+    //_startAutoRefresh();
+    widget._firebaseService.listenForConversationChanges();
+  }
+
+  void _startAutoRefresh(){
+    _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if(mounted){
+        if(kDebugMode){
+          print("Test this out!");
+        }
+        setState(() {
+          _initializeStream();
+        });
+      }
+    });
+  }
+
+  void _initializeStream() {
+    _conversationsStream = widget._firebaseService.conversationsStream();
+  }
+
+
+  @override
+  void didUpdateWidget(covariant ChatLogPage oldWidget){
+    super.didUpdateWidget(oldWidget);
+    if(oldWidget._firebaseService.userId != widget._firebaseService.userId){
+      if(kDebugMode){
+        print('User ID has changed. Reinitializing stream.');
+      }
+      _initializeStream();
+    }else{
+      if(kDebugMode){
+        print('No significant changes in properties.');
+      }
+    }
+  }
+
+  String _formatMessageTime(DateTime timestamp) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final aWeekAgo = today.subtract(const Duration(days: 7));
+
+    if (timestamp.isAfter(today)) {
+      return DateFormat('h:mm a').format(timestamp);
+    } else if (timestamp.isAfter(aWeekAgo)) {
+      return DateFormat('EEE').format(timestamp);
+    } else if (timestamp.year == now.year) {
+      return DateFormat('MMMM d').format(timestamp);
+    } else {
+      return DateFormat('MMMM d, yyyy').format(timestamp);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Chats", style: TextStyle(color: Colors.black)),
+        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
+      ),
+      body: StreamBuilder<List<Conversation>>(
+        stream:  _conversationsStream,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error fetching conversations: ${snapshot.error}'));
+          } else if (snapshot.hasData && snapshot.data!.isEmpty) {
+            return const Center(child: Text("No conversations found."));
+          } else {
+            return ListView.builder(
+              itemCount: snapshot.data?.length ?? 0,
+              itemBuilder: (context, index) {
+                var conversation = snapshot.data![index];
+                int numberOfReceivers = conversation.messages.isNotEmpty
+                    ? conversation.messages.last.receiverId.length
+                    : 0;
+                String lastMessageContent = conversation.messages.isNotEmpty
+                  ? conversation.messages.last.content
+                  : "No messages";
+                if (lastMessageContent.length > 100) {
+                  lastMessageContent = "${lastMessageContent.substring(0, 100)}...";
+                }
+                String formattedTime = conversation.messages.isNotEmpty
+                  ? _formatMessageTime(conversation.messages.last.timestamp)
+                  : "No Date";
+                bool isAdmin = conversation.isAdmin;
+                String adminTitle = conversation.adminTitle;
+
+                return Column(
+                  children: [
+                    FutureBuilder<String>(
+                      future: widget._firebaseService.formatParticipantNames(conversation.participants),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const ListTile(title: Text("Loading..."));
+                        } else if (snapshot.hasError) {
+                          return ListTile(title: Text('Error: ${snapshot.error}'));
+                        }
+
+                        String participants = snapshot.data ?? "Unknown";
+                        return ListTile(
+                          leading: CircleAvatar(
+                            child: Text((numberOfReceivers > 1 || isAdmin) ? adminTitle[0] : (participants.isNotEmpty ? participants[0] : '?'),
+                                style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                          title: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: (numberOfReceivers > 1 || isAdmin) ? "$adminTitle " : participants,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (isAdmin) // Conditional tag for official business
+                                        const TextSpan(
+                                          text: ' [Course Chat]',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Color.fromRGBO(128, 0, 0, 1),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Text(formattedTime, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                            ],
+                          ),
+                          subtitle: Text(lastMessageContent, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                          onTap: () {
+                            Navigator.push(context, MaterialPageRoute(
+                              builder: (context) => ChatPage(conversationId: conversation.conversationIds),
+                            )).then((value) => setState(() {
+                              _initializeStream();
+                            }));
+                          },
+                        );
+                      },
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.only(left: 69.0),
+                      child: Divider(color: Colors.grey, height: 0.25),
+                    ),
+                  ],
+                );
+              },
+            );
+          }
+        },
+      ),
+    );
+  }
+}
+
+
+chatlogpage.dart
+----------------
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:cuny_connect/services/firebase_service.dart';
+import 'package:cuny_connect/pages/chat_page.dart';
+import 'package:cuny_connect/utils/conversation.dart';
+import 'dart:async';
+
+class ChatLogPage extends StatefulWidget {
+  final FirebaseService _firebaseService = FirebaseService();
+
+  ChatLogPage({super.key});
+
+  @override
+  _ChatLogPageState createState() => _ChatLogPageState();
+}
+
+class _ChatLogPageState extends State<ChatLogPage> {
+  late Stream<List<Conversation>> _conversationsStream;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeStream();
+    //_startAutoRefresh();
+    widget._firebaseService.listenForConversationChanges();
+  }
+
+  void _startAutoRefresh(){
+    _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if(mounted){
+        if(kDebugMode){
+          print("Test this out!");
+        }
+        setState(() {
+          _initializeStream();
+        });
+      }
+    });
+  }
+
+  void _initializeStream() {
+    _conversationsStream = widget._firebaseService.conversationsStream();
+  }
+
+
+  @override
+  void didUpdateWidget(covariant ChatLogPage oldWidget){
+    super.didUpdateWidget(oldWidget);
+    if(oldWidget._firebaseService.userId != widget._firebaseService.userId){
+      if(kDebugMode){
+        print('User ID has changed. Reinitializing stream.');
+      }
+      _initializeStream();
+    }else{
+      if(kDebugMode){
+        print('No significant changes in properties.');
+      }
+    }
+  }
+
+  String _formatMessageTime(DateTime timestamp) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final aWeekAgo = today.subtract(const Duration(days: 7));
+
+    if (timestamp.isAfter(today)) {
+      return DateFormat('h:mm a').format(timestamp);
+    } else if (timestamp.isAfter(aWeekAgo)) {
+      return DateFormat('EEE').format(timestamp);
+    } else if (timestamp.year == now.year) {
+      return DateFormat('MMMM d').format(timestamp);
+    } else {
+      return DateFormat('MMMM d, yyyy').format(timestamp);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Chats", style: TextStyle(color: Colors.black)),
+        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
+      ),
+      body: StreamBuilder<List<Conversation>>(
+        stream:  _conversationsStream,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error fetching conversations: ${snapshot.error}'));
+          } else if (snapshot.hasData && snapshot.data!.isEmpty) {
+            return const Center(child: Text("No conversations found."));
+          } else {
+            return ListView.builder(
+              itemCount: snapshot.data?.length ?? 0,
+              itemBuilder: (context, index) {
+                var conversation = snapshot.data![index];
+                int numberOfReceivers = conversation.messages.isNotEmpty
+                    ? conversation.messages.last.receiverId.length
+                    : 0;
+                String lastMessageContent = conversation.messages.isNotEmpty
+                  ? conversation.messages.last.content
+                  : "No messages";
+                if (lastMessageContent.length > 100) {
+                  lastMessageContent = "${lastMessageContent.substring(0, 100)}...";
+                }
+                String formattedTime = conversation.messages.isNotEmpty
+                  ? _formatMessageTime(conversation.messages.last.timestamp)
+                  : "No Date";
+                bool isAdmin = conversation.isAdmin;
+                String adminTitle = conversation.adminTitle;
+
+                return Column(
+                  children: [
+                    FutureBuilder<String>(
+                      future: widget._firebaseService.formatParticipantNames(conversation.participants),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const ListTile(title: Text("Loading..."));
+                        } else if (snapshot.hasError) {
+                          return ListTile(title: Text('Error: ${snapshot.error}'));
+                        }
+
+                        String participants = snapshot.data ?? "Unknown";
+                        return ListTile(
+                          leading: CircleAvatar(
+                            child: Text((numberOfReceivers > 1 || isAdmin) ? adminTitle[0] : (participants.isNotEmpty ? participants[0] : '?'),
+                                style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                          title: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: (numberOfReceivers > 1 || isAdmin) ? "$adminTitle " : participants,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (isAdmin) // Conditional tag for official business
+                                        const TextSpan(
+                                          text: ' [Course Chat]',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Color.fromRGBO(128, 0, 0, 1),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Text(formattedTime, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                            ],
+                          ),
+                          subtitle: Text(lastMessageContent, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                          onTap: () {
+                            Navigator.push(context, MaterialPageRoute(
+                              builder: (context) => ChatPage(conversationId: conversation.conversationIds),
+                            )).then((value) => setState(() {
+                              _initializeStream();
+                            }));
+                          },
+                        );
+                      },
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.only(left: 69.0),
+                      child: Divider(color: Colors.grey, height: 0.25),
+                    ),
+                  ],
+                );
+              },
+            );
+          }
+        },
+      ),
+    );
+  }
+}
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:cuny_connect/services/firebase_service.dart';
+import 'package:cuny_connect/pages/chat_page.dart';
+import 'package:cuny_connect/utils/conversation.dart';
+import 'dart:async';
+
+class ChatLogPage extends StatefulWidget {
+  final FirebaseService _firebaseService = FirebaseService();
+
+  ChatLogPage({super.key});
+
+  @override
+  _ChatLogPageState createState() => _ChatLogPageState();
+}
+
+class _ChatLogPageState extends State<ChatLogPage> {
+  late Stream<List<Conversation>> _conversationsStream;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeStream();
+    //_startAutoRefresh();
+    widget._firebaseService.listenForConversationChanges();
+  }
+
+  void _startAutoRefresh(){
+    _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if(mounted){
+        if(kDebugMode){
+          print("Test this out!");
+        }
+        setState(() {
+          _initializeStream();
+        });
+      }
+    });
+  }
+
+  void _initializeStream() {
+    _conversationsStream = widget._firebaseService.conversationsStream();
+  }
+
+
+  @override
+  void didUpdateWidget(covariant ChatLogPage oldWidget){
+    super.didUpdateWidget(oldWidget);
+    if(oldWidget._firebaseService.userId != widget._firebaseService.userId){
+      if(kDebugMode){
+        print('User ID has changed. Reinitializing stream.');
+      }
+      _initializeStream();
+    }else{
+      if(kDebugMode){
+        print('No significant changes in properties.');
+      }
+    }
+  }
+
+  String _formatMessageTime(DateTime timestamp) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final aWeekAgo = today.subtract(const Duration(days: 7));
+
+    if (timestamp.isAfter(today)) {
+      return DateFormat('h:mm a').format(timestamp);
+    } else if (timestamp.isAfter(aWeekAgo)) {
+      return DateFormat('EEE').format(timestamp);
+    } else if (timestamp.year == now.year) {
+      return DateFormat('MMMM d').format(timestamp);
+    } else {
+      return DateFormat('MMMM d, yyyy').format(timestamp);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Chats", style: TextStyle(color: Colors.black)),
+        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
+      ),
+      body: StreamBuilder<List<Conversation>>(
+        stream:  _conversationsStream,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error fetching conversations: ${snapshot.error}'));
+          } else if (snapshot.hasData && snapshot.data!.isEmpty) {
+            return const Center(child: Text("No conversations found."));
+          } else {
+            return ListView.builder(
+              itemCount: snapshot.data?.length ?? 0,
+              itemBuilder: (context, index) {
+                var conversation = snapshot.data![index];
+                int numberOfReceivers = conversation.messages.isNotEmpty
+                    ? conversation.messages.last.receiverId.length
+                    : 0;
+                String lastMessageContent = conversation.messages.isNotEmpty
+                  ? conversation.messages.last.content
+                  : "No messages";
+                if (lastMessageContent.length > 100) {
+                  lastMessageContent = "${lastMessageContent.substring(0, 100)}...";
+                }
+                String formattedTime = conversation.messages.isNotEmpty
+                  ? _formatMessageTime(conversation.messages.last.timestamp)
+                  : "No Date";
+                bool isAdmin = conversation.isAdmin;
+                String adminTitle = conversation.adminTitle;
+
+                return Column(
+                  children: [
+                    FutureBuilder<String>(
+                      future: widget._firebaseService.formatParticipantNames(conversation.participants),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const ListTile(title: Text("Loading..."));
+                        } else if (snapshot.hasError) {
+                          return ListTile(title: Text('Error: ${snapshot.error}'));
+                        }
+
+                        String participants = snapshot.data ?? "Unknown";
+                        return ListTile(
+                          leading: CircleAvatar(
+                            child: Text((numberOfReceivers > 1 || isAdmin) ? adminTitle[0] : (participants.isNotEmpty ? participants[0] : '?'),
+                                style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                          title: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: (numberOfReceivers > 1 || isAdmin) ? "$adminTitle " : participants,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (isAdmin) // Conditional tag for official business
+                                        const TextSpan(
+                                          text: ' [Course Chat]',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Color.fromRGBO(128, 0, 0, 1),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Text(formattedTime, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                            ],
+                          ),
+                          subtitle: Text(lastMessageContent, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                          onTap: () {
+                            Navigator.push(context, MaterialPageRoute(
+                              builder: (context) => ChatPage(conversationId: conversation.conversationIds),
+                            )).then((value) => setState(() {
+                              _initializeStream();
+                            }));
+                          },
+                        );
+                      },
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.only(left: 69.0),
+                      child: Divider(color: Colors.grey, height: 0.25),
+                    ),
+                  ],
+                );
+              },
+            );
+          }
+        },
+      ),
+    );
+  }
+}
+

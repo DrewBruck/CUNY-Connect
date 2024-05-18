@@ -1,22 +1,25 @@
 import 'package:cuny_connect/auth/auth_gate.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:cuny_connect/pages/socket_service.dart';
 import 'package:cuny_connect/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:cuny_connect/utils/message.dart';
-
+import 'package:cuny_connect/utils/hive.dart';
 
 void main() async {
-
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  
-  await Hive.initFlutter(); // Initialize Hive
-  Hive.registerAdapter(ChatMessageAdapter()); // Register your ChatMessage adapter
-  await Hive.openBox<ChatMessage>('messages'); // Open a box to store ChatMessage objects
-  
-  runApp(const MyApp());
 
+  await HiveHelper.initializeHive();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => SocketService()),
+      ],
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

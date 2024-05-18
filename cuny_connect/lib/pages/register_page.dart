@@ -182,10 +182,15 @@ class _RegisterPageState extends State<RegisterPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.switch_account_rounded, size: 150),
+              //const Icon(Icons.switch_account_rounded, size: 150),
+              Image.asset(
+                'assets/images/Logo-CC.png',
+                width: 150,
+                height: 150,
+              ),
               const SizedBox(height: 30),
               const Text(
-                'Register for Cuny Connect',
+                'Register now!',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 18),
               ),

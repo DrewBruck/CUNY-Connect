@@ -29,6 +29,9 @@ class _RegisterPageState extends State<RegisterPage> {
     'GEO 101': 'b9Xs2YhMWocxGOfd3099',
     'ART 101': 'gwNh8DhhPJi5gXKORvjg',
     'MATH 100': 'jufv4qAFHl1jedyh5WOg',
+    'CSCI 335': 'DJtHnsRFpfJExIMJZU3N',
+    'ENGL 499': '9erqJRvvznPHmxrE8Gtu',
+    'CSCI 499': 'n3n2e4UKbBcN7mlk0hWc',
   };
 
   final List<Map<String, List<String>>> schedules = [

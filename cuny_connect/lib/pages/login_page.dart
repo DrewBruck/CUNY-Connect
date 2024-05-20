@@ -36,10 +36,15 @@ class LoginPage extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.school_outlined, size: 150),
+              // const Icon(Icons.school_outlined, size: 150),
+              Image.asset(
+                'assets/images/Logo-CC.png',
+                width: 250,
+                height: 250,
+              ),
               const SizedBox(height: 20),
               const Text(
-                'School Group Chats Made Easy',
+                'Welcome to Cuny Connect',
                 style: TextStyle(fontSize: 20),
               ),
               const SizedBox(height: 50),

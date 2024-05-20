@@ -17,9 +17,13 @@ class AuthService {
     }
   }
 
-  //sign up
-
-  //sign out
-
-  //errors
+// Reset password
+  Future<void> resetPassword(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      print(e);
+      throw e;
+    }
+  }
 }

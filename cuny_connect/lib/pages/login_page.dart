@@ -28,6 +28,68 @@ class LoginPage extends StatelessWidget {
     }
   }
 
+  void forgotPassword(BuildContext context) {
+    final TextEditingController emailController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Forgot Password"),
+          content: TextField(
+            controller: emailController,
+            decoration: const InputDecoration(
+              hintText: "Enter your email",
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () async {
+                final email = emailController.text;
+                if (email.isEmpty) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const AlertDialog(
+                      title: Text("Error"),
+                      content: Text("Please enter your email address."),
+                    ),
+                  );
+                  return;
+                }
+                try {
+                  final authService = AuthService();
+                  await authService.resetPassword(email);
+                  Navigator.of(context).pop(); // Close the email input dialog
+                  showDialog(
+                    context: context,
+                    builder: (context) => const AlertDialog(
+                      title: Text("Password Reset Email Sent"),
+                      content: Text(
+                          "Please check your email to reset your password."),
+                    ),
+                  );
+                } catch (e) {
+                  Navigator.of(context).pop(); // Close the email input dialog
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text("Error"),
+                      content: Text(e.toString()),
+                    ),
+                  );
+                }
+              },
+              child: const Text("Submit"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,6 +125,14 @@ class LoginPage extends StatelessWidget {
               MyButton(
                 buttonName: "Login",
                 onTap: () => login(context),
+              ),
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: () => forgotPassword(context),
+                child: const Text(
+                  'Forgot Password?',
+                  style: TextStyle(color: Colors.blue),
+                ),
               ),
               const SizedBox(height: 30),
               Row(

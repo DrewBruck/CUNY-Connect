@@ -1,1 +1,26 @@
+# Ignore macOS system files
 **/.DS_Store
+
+# Ignore build directories
+**/build/
+
+# Ignore Dart tool directories
+**/.dart_tool/
+
+# Ignore generated plugin files
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Ignore Android specific files and directories
+**/android/.gradle/
+**/android/.idea/
+**/android/local.properties
+**/android/gradle/
+
+# Ignore iOS specific files and directories
+**/ios/.generated/
+**/ios/.symlinks/
+**/ios/Flutter/
+
+# Ignore Visual Studio Code settings
+**/.vscode/

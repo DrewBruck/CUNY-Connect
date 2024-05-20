@@ -6,6 +6,7 @@ class CUNYUser {
   final String bio;
   final List<String> schedule;
   final List<String> conIDs;
+  final String? profilePictureUrl;
 
   CUNYUser({
     required this.CUNYUserId,
@@ -14,12 +15,15 @@ class CUNYUser {
     required this.major,
     required this.schedule,
     required this.bio,
-    required this.conIDs
+    required this.conIDs,
+    this.profilePictureUrl,
   });
 
   factory CUNYUser.fromMap(Map<String, dynamic> data, String UserID) {
-    List<String> scheduleList =  List<String>.from(data['schedule'] as List<dynamic> ?? []);
-    List<String> conIDList =  List<String>.from(data['conversationIDs'] as List<dynamic> ?? []);
+    List<String> scheduleList =
+        List<String>.from(data['schedule'] as List<dynamic> ?? []);
+    List<String> conIDList =
+        List<String>.from(data['conversationIDs'] as List<dynamic> ?? []);
     return CUNYUser(
       CUNYUserId: UserID,
       name: data['name'],
@@ -28,7 +32,7 @@ class CUNYUser {
       bio: data['bio'],
       conIDs: conIDList,
       schedule: scheduleList,
+      profilePictureUrl: data['profilePictureUrl'],
     );
   }
 }
-

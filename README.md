@@ -30,7 +30,7 @@ classmates to promote academic success.
 - Optimize algorithms to increase the speed of the app.
 
 
-# Dependencies, Technologies and Packages
+# Dependencies, Technologies, and Packages
 
 | **Package**           | **Version**        | **Description**                                                                                     |
 |-----------------------|--------------------|-----------------------------------------------------------------------------------------------------|

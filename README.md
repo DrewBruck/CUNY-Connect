@@ -1,5 +1,5 @@
 # CUNY Connect
-# Drew Bruck, Mohammed Saab, Stanley Wong
+## Drew Bruck, Mohammed Saab, Stanley Wong
 
 
 ## Overview

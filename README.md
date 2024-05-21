@@ -65,7 +65,7 @@ __Commit and Push Files__
 ```
 git add .
 git commit -m "Message"
-git push -u origin main
+git push 
 ```
 
 __Get Current Files__
